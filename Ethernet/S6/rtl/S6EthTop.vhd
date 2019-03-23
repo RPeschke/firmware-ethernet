@@ -160,12 +160,12 @@ begin
          -- 101: GCLK10/GCLK11 selected
          -- 110: PLLCLK10/PLLCLK11 selected
          -- 111: CLKINWEST0/CLKINWEST1 selected 
-         REF_SEL_PLL0_G => "001",
-         REF_SEL_PLL1_G => "001"
+         REF_SEL_PLL0_G => "000",
+         REF_SEL_PLL1_G => "000"
       )
       port map (
          -- Clocking & reset 
-         gtpClkIn      => fabClk,
+         gtpClkIn      => gtClk,
          gtpReset0     => gtpReset0,
          gtpReset1     => gtpReset1,
          txReset0      => txReset0,
