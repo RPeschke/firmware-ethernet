@@ -194,12 +194,16 @@ begin
    -- ...
    -- Instead of this:
    -- Channel 1 as a command interpreter
-   U_CommandInterpreter : entity work.Axi_CommandInterpreter
-
+   U_CommandInterpreter : entity work.CommandInterpreter
+      generic map (
+         REG_ADDR_BITS_G => 16,
+         REG_DATA_BITS_G => 16,
+         GATE_DELAY_G    => GATE_DELAY_G
+      )
       port map ( 
          -- User clock and reset
          usrClk      => ethClk125,
-      
+         usrRst      => userRst,
          -- Incoming data
          rxData      => userRxDataChannels(1),
          rxDataValid => userRxDataValids(1),
@@ -209,9 +213,16 @@ begin
          txData      => userTxDataChannels(1),
          txDataValid => userTxDataValids(1),
          txDataLast  => userTxDataLasts(1),
-         txDataReady => userTxDataReadys(1)
-
-			
+         txDataReady => userTxDataReadys(1),
+         -- This board ID
+         myId        => x"00AB",
+         -- Register interfaces
+         regAddr     => regAddr,
+         regWrData   => regWrData,
+         regRdData   => regRdData,
+         regReq      => regReq,
+         regOp       => regOp,
+         regAck      => regAck
       );
 
    -- A few registers to toy with
@@ -225,7 +236,7 @@ begin
             case regAddr is
                when x"0000" => regRdData <= numWords;
                                if regOp = '1' then
-                                 numWords <= regWrData;
+                                  numWords <= regWrData;
                                end if;
                when x"0001" => regRdData <= waitCyclesHigh;
                                if regOp = '1' then
