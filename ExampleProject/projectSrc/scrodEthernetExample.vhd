@@ -20,10 +20,15 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 --use IEEE.NUMERIC_STD.ALL;
+library UNIMACRO;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use IEEE.NUMERIC_STD.ALL;
 use work.UtilityPkg.all;
 use work.Eth1000BaseXPkg.all;
 use work.GigabitEthPkg.all;
-
+use work.BMD_definitions.all;
+use work.BMD_autoinit_definitions.all;
 library UNISIM;
 use UNISIM.VComponents.all;
 
@@ -96,6 +101,8 @@ architecture Behavioral of scrodEthernetExample is
    signal regOp       : sl;
    signal regAck      : sl;
    
+	--HMB SCROD Control Registers
+	signal CtrlRegister : GPR;
    -- Test registers
    -- Default is to send 1000 counter words once per second.
    signal waitCyclesHigh : slv(15 downto 0) := x"0773";
@@ -154,38 +161,6 @@ begin
          userRxDataReady => userRxDataReadys
       );
 
-   U_TpGenTx : entity work.TpGenTx
-      generic map (
---         NUM_WORDS_G   => 1000,
---         WAIT_CYCLES_G => 100,
-         GATE_DELAY_G  => GATE_DELAY_G
-      )
-      port map (
-         -- User clock and reset
-         userClk         => ethClk125,
-         userRst         => userRst,
-         -- Configuration
-         waitCycles      => waitCyclesHigh & waitCyclesLow,
-         numWords        => x"0000" & numWords,
-         -- Connection to user logic
-         userTxData      => tpData,
-         userTxDataValid => tpDataValid,
-         userTxDataLast  => tpDataLast,
-         userTxDataReady => tpDataReady
-      );
-
-   -- Channel 0 TX high speed test pattern
-   --           RX unused
-   userTxDataChannels(0) <= tpData;
-   userTxDataValids(0)   <= tpDataValid;
-   userTxDataLasts(0)    <= tpDataLast;
-   tpDataReady           <= userTxDataReadys(0);
-   -- Note that the Channel 0 RX channels are unused here
-   --userRxDataChannels;
-   --userRxDataValids;
-   --userRxDataLasts;
-   userRxDataReadys(0) <= '1';
-
    -- Channel 1 can be modified to a a simple loopback like this:
    -- userTxDataChannels(1) <= userRxDataChannels(1);
    -- userTxDataValids(1)   <= userRxDataValids(1);
@@ -226,34 +201,71 @@ begin
       );
 
    -- A few registers to toy with
-   process(ethClk125) begin
+   Ctrl_Reg: process(ethClk125) begin
       if rising_edge(ethClk125) then
          if userRst = '1' then
             regAck    <= '0';
             regRdData <= (others => '0');
          elsif regReq = '1' then
             regAck <= regReq;
-            case regAddr is
-               when x"0000" => regRdData <= numWords;
-                               if regOp = '1' then
-                                  numWords <= regWrData;
-                               end if;
-               when x"0001" => regRdData <= waitCyclesHigh;
-                               if regOp = '1' then
-                                  waitCyclesHigh <= regWrData;
-                               end if;
-               when x"0002" => regRdData <= waitCyclesLow;
-                               if regOp = '1' then
-                                  waitCyclesLow <= regWrData;
-                               end if;                               
-               when others  =>
-                  regRdData <= (others => '0');
-            end case;
+				if regOp = '1' then
+					CtrlRegister(to_integer(unsigned(regAddr))) <= regWrData;
+				else 
+					regRdData <= CtrlRegister(to_integer(unsigned(regAddr)));
+--            case regAddr is
+--               when x"0000" => regRdData <= numWords;
+--                               if regOp = '1' then
+--                                  numWords <= regWrData;
+--                               end if;
+--               when x"0001" => regRdData <= waitCyclesHigh;
+--                               if regOp = '1' then
+--                                  waitCyclesHigh <= regWrData;
+--                               end if;
+--               when x"0002" => regRdData <= waitCyclesLow;
+--                               if regOp = '1' then
+--                                  waitCyclesLow <= regWrData;
+--                               end if;                               
+--               when others  =>
+--                  regRdData <= (others => '0');
+--            end case;
+				 end if;
          else
             regAck <= '0';
          end if;
       end if;
    end process;
+
+   U_TpGenTx : entity work.TpGenTx
+      generic map (
+--         NUM_WORDS_G   => 1000,
+--         WAIT_CYCLES_G => 100,
+         GATE_DELAY_G  => GATE_DELAY_G
+      )
+      port map (
+         -- User clock and reset
+         userClk         => ethClk125,
+         userRst         => userRst,
+         -- Configuration
+         waitCycles      => waitCyclesHigh & waitCyclesLow,
+         numWords        => x"0000" & numWords,
+         -- Connection to user logic
+         userTxData      => tpData,
+         userTxDataValid => tpDataValid,
+         userTxDataLast  => tpDataLast,
+         userTxDataReady => tpDataReady
+      );
+
+   -- Channel 0 TX high speed test pattern
+   --           RX unused
+   userTxDataChannels(0) <= tpData;
+   userTxDataValids(0)   <= tpDataValid;
+   userTxDataLasts(0)    <= tpDataLast;
+   tpDataReady           <= userTxDataReadys(0);
+   -- Note that the Channel 0 RX channels are unused here
+			--userRxDataChannels;
+			--userRxDataValids;
+			--userRxDataLasts;
+   userRxDataReadys(0) <= '1';
          
 end Behavioral;
 
