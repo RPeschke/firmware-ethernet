@@ -12,6 +12,7 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 --use IEEE.NUMERIC_STD.ALL;
+use work.all;
 use work.UtilityPkg.all;
 use work.Eth1000BaseXPkg.all;
 use work.GigabitEthPkg.all;

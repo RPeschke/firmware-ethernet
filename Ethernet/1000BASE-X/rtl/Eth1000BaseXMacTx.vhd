@@ -12,9 +12,11 @@
 ---------------------------------------------------------------------------------
 
 LIBRARY ieee;
+
 use ieee.std_logic_1164.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
+use work.all;
 use work.UtilityPkg.all;
 use work.Eth1000BaseXPkg.all;
 use work.GigabitEthPkg.all;
