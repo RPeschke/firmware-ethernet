@@ -1,3 +1,0 @@
-[submodule "ExampleProject/firmware-general"]
-	path = ExampleProject/firmware-general
-	url = https://github.com/RPeschke/firmware-general.git
