@@ -25,7 +25,6 @@ entity Imp_test_bench_reader is
   rxDataLast  : in  sl;
   rxDataReady : out sl;
   data_out    : out Word32Array(COLNum - 1 downto 0) := (others => (others => '0'));
-  controls_out    : out Word32Array(3 downto 0) := (others => (others => '0'));
   valid : out sl
   );
 end entity;
@@ -51,11 +50,7 @@ architecture rtl of Imp_test_bench_reader is
   signal i_data_out    :  Word32Array((COLNum -1) downto 0) := (others => (others => '0'));
   signal we          : sl := '0';
   signal Max_word : integer := 10;
-  signal reset : sl := '0';
 
-  signal  index_signal      : slv(31 downto 0) := (others => '0');
-  signal  timestamp_signal      : slv(31 downto 0) := (others => '0');
-  signal  packetCounter_signal      : slv(31 downto 0) := (others => '0');
 begin
   axi_in_m2s.data <= rxData;
   axi_in_m2s.last <=rxDataLast;
@@ -69,13 +64,11 @@ begin
     variable Index : integer :=0;
     variable packetCounter : integer :=0;
     variable rxbuffer      : slv(31 downto 0) := (others => '0');
-    variable timeStamp      : slv(31 downto 0) := (others => '0');
   begin
     if (rising_edge(Clk)) then
 
       pull_axi_stream_32_slave_stream(axi_in, axi_in_m2s);
       we <= '0';
-      reset <= '0';
 
       fifo_r_s2m.read_enable <='0';
       if Index = 0 then 
@@ -89,15 +82,12 @@ begin
         i_data_out(Index) <=  rxbuffer;
         Index := Index + 1;
         if IsEndOfStream(axi_in) then 
-          Index := 0;  
           if (packetCounter > 0) then
             we <=  '1';
           else 
-            -- slv_to_integer(i_data_out(0) ,Max_word );
-            Index := Index + 1;
-            timeStamp := (others => '0');
+             slv_to_integer(i_data_out(0) ,Max_word );
           end if;
-          
+          Index := 0;
           packetCounter := packetCounter +1;
         end if;
       end if;
@@ -118,24 +108,12 @@ begin
      
       if packetCounter > 2* Max_word then 
         packetCounter := 0;
-        reset <='1';
-        packetCounter_signal <= packetCounter_signal +1;
+        
       end if;
       
       
      push_axi_stream_32_slave_stream(axi_in,axi_in_s2m);
      valid <= fifo_r_s2m.read_enable;
-
-     -- time Stamping
-   
-     timestamp_signal <= timeStamp;
-     timeStamp := timeStamp + 1;
-     if timeStamp > 1000000 then 
-      timeStamp := (others => '0');
-      reset <='1';
-     end if;
-     index_signal <= std_logic_vector(to_signed(Index, index_signal'length));
-     -- // time Stamping
       --txData <=   b1;
     end if;
   end process seq;
@@ -149,7 +127,7 @@ begin
     
   ) port map (
     clk   => clk,
-    rst   => reset,
+    rst   => '0',
     din   => i_data_out(i),
     wen   =>  we,
     full  => open,
@@ -166,7 +144,7 @@ begin
 
   ) port map (
     clk   => clk,
-    rst   => reset,
+    rst   => '0',
     din   => i_data_out(0),
     wen   =>  we,
     full  => open,
@@ -178,51 +156,5 @@ begin
   data_out(0) <=  fifo_r_m2s.data;
   
 
-
-  index_fifo_i : entity work.fifo_cc generic map (
-    DATA_WIDTH => 32,
-    DEPTH => 5 
-
-  ) port map (
-    clk   => clk,
-    rst   => reset,
-    din   => index_signal,
-    wen   =>  we,
-    full  => open,
-    ren   => fifo_r_s2m.read_enable,
-    dout  => controls_out(1),
-    empty => open
-  );
-
-
-    timeStamp_fifo_i : entity work.fifo_cc generic map (
-      DATA_WIDTH => 32,
-      DEPTH => 5 
-  
-    ) port map (
-      clk   => clk,
-      rst   => reset,
-      din   => timestamp_signal,
-      wen   =>  we,
-      full  => open,
-      ren   => fifo_r_s2m.read_enable,
-      dout  => controls_out(0),
-      empty => open
-    );
-
-    packet_fifo_i : entity work.fifo_cc generic map (
-      DATA_WIDTH => 32,
-      DEPTH => 5 
-  
-    ) port map (
-      clk   => clk,
-      rst   => reset,
-      din   => packetCounter_signal,
-      wen   =>  we,
-      full  => open,
-      ren   => fifo_r_s2m.read_enable,
-      dout  => controls_out(2),
-      empty => open
-    );
   
 end architecture;
