@@ -24,7 +24,7 @@ NET txDisable LOC = E8   | IOSTANDARD = LVCMOS33;
 #NET led<14>   LOC = G19  | IOSTANDARD = LVCMOS33;
 #NET led<15>   LOC = F19  | IOSTANDARD = LVCMOS33;
 
-#NET "fabClk" TNM_NET="fabClk"; 
+NET "fabClk" TNM_NET="fabClk"; 
 TIMESPEC "TS_fabClk"=PERIOD "fabClk" 8 ns HIGH 50 %; 
-#NET "U_S6EthTop/U_GtpS6/usrClkSource" TNM_NET="U_GtpS6/usrClkSource";
+NET "U_S6EthTop/U_GtpS6/usrClkSource" TNM_NET="U_GtpS6/usrClkSource";
 TIMESPEC "TS_usrClkSource"=PERIOD "U_GtpS6/usrClkSource" 8 ns HIGH 50 %;
