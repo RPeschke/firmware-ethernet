@@ -185,7 +185,7 @@ begin
   
   
   
-  u_reader : entity work.Imp_test_bench_reader 
+  u_reader : entity work.Imp_test_bench_reader
     generic map (
       COLNum => COLNum 
     ) port map (

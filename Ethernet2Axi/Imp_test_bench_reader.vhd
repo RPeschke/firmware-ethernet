@@ -41,6 +41,7 @@ signal reader_state : state_t := idle;
 
 
 signal  timestamp_signal      : slv(31 downto 0) := (others => '0');
+signal  timeOut_signal      : slv(31 downto 0) := (others => '0');
 
 signal  max_Packet_nr_signal      : slv(31 downto 0) := (others => '0');
 signal  numStream_signal      : slv(31 downto 0) := (others => '0');
@@ -81,12 +82,13 @@ begin
     fifo_r_s2m.read_enable <='0';
     valid <= '0';
     timestamp_signal <= timestamp_signal +1;
-
+    timeOut_signal <= timeOut_signal + 1;
     if reader_state = idle then 
         i_data_out  <= (others => (others => '0'));
         max_Packet_nr_signal <= (others => '0');
         numStream_signal <= (others => '0');
         if isReceivingData(axi_in)  then 
+            timeOut_signal <= (others => '0');
             reader_state <= process_header;
             timestamp_signal <= (others => '0');
             Index := 0;
@@ -94,6 +96,7 @@ begin
         end if;
     elsif reader_state = process_header then
       if isReceivingData(axi_in) then 
+        timeOut_signal <= (others => '0');
         read_data(axi_in,rxbuffer);
         if index = 0 then 
           max_Packet_nr_signal <= rxbuffer;
@@ -106,6 +109,7 @@ begin
 
         if IsEndOfStream(axi_in) then 
           reader_state <= make_packet;
+          Index := 0;
         end if;
       end if;
 
@@ -115,7 +119,7 @@ begin
         end if;
         if isReceivingData(axi_in) then 
           read_data(axi_in,rxbuffer);
-          
+          timeOut_signal <= (others => '0');
           i_data_out(Index) <=  rxbuffer;
           Index := Index + 1;
           
@@ -138,7 +142,7 @@ begin
             reader_state <= send;
           end if;
                                   
-        elsif timestamp_signal >  10000000   then
+        elsif timeOut_signal >  10000000   then
           packetCounter := 0;
           reader_state <= send;
         end if;
@@ -155,6 +159,7 @@ begin
       -- Flushing stream
       if isReceivingData(axi_in) then 
         read_data(axi_in,rxbuffer);
+        timeOut_signal <= (others => '0');
         if IsEndOfStream(axi_in) then 
           index := 0;
           packetCounter :=packetCounter +1;
@@ -178,7 +183,7 @@ begin
         end if;
     elsif reader_state = wait_for_idle then
         
-        if timestamp_signal > 200000 then 
+        if timeOut_signal > 200000 then 
             reader_state <= idle;
 
 

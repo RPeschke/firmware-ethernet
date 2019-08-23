@@ -54,7 +54,7 @@ signal fifo_r_m2s : FIFO_nativ_reader_32_m2s := FIFO_nativ_reader_32_m2s_null;
 signal fifo_r_s2m : FIFO_nativ_reader_32_s2m := FIFO_nativ_reader_32_s2m_null;
 signal i_data_out    :  Word32Array((COLNum -1) downto 0) := (others => (others => '0'));
 signal we          : sl := '0';
-signal Max_word : integer := 10;
+signal Max_word : integer := 50;
 
 begin
 axi_in_m2s.data <= rxData;
