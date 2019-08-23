@@ -32,11 +32,13 @@ architecture rtl of simpleArithmetic_ether_test is
    
 
     
-     constant COLNum : integer := 3;
+     constant COLNum : integer := 4;
      signal i_data :  Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
      signal i_valid      : sl := '0';
-     
-     constant COLNum_out : integer := 3;
+     signal i_controls_out :  Word32Array(3 downto 0) := (others => (others => '0'));
+
+
+     constant COLNum_out : integer := 11;
      signal i_data_out :  Word32Array(COLNum_out -1 downto 0) := (others => (others => '0'));
      
   
@@ -44,7 +46,7 @@ architecture rtl of simpleArithmetic_ether_test is
      signal data_out : simplearithmetictest_writer_rec := simplearithmetictest_writer_rec_null;
 begin
   
-u_reader : entity work.Imp_test_bench_reader 
+u_reader : entity work.Imp_test_bench_reader
 generic map (
   COLNum => COLNum 
 ) port map (
@@ -55,7 +57,8 @@ generic map (
   rxDataLast  => rxDataLast,
   rxDataReady => rxDataReady,
   data_out    => i_data,
-  valid => i_valid
+  valid => i_valid,
+  controls_out => i_controls_out
 );
 
 u_writer : entity work.Imp_test_bench_writer 
@@ -73,33 +76,41 @@ generic map (
 );
 
 
-
 -- <DUT>
 DUT :  entity work.simplearithmetictest port map(
-clk => clk,
-multia_in => data_out.multia_in,
-multib_in => data_out.multib_in,
-multic_out => data_out.multic_out
+  clk => clk,
+  multia_in => i_data(1),
+  multib_in => i_data(2),
+  multic_out => i_data_out(8),
+  Controller => i_data_out(9)
 );
 -- </DUT>
 
 --  <data_out_converter>
 
 
-integer_to_slv(data_out.multic_out, i_data_out(2) );
-
+--integer_to_slv(data_out.multic_out, i_data_out(3) );
+--i_data_out(4) <= test_data;
 --  </data_out_converter>
 
 -- <data_in_converter> 
 
-slv_to_integer(i_data(0), data_in.multia_in);
-slv_to_integer(i_data(1), data_in.multib_in);
+--slv_to_integer(i_data(1), data_in.multia_in);
+--slv_to_integer(i_data(2), data_in.multib_in);
 
 --</data_in_converter>
 
 -- <connect_input_output>
-i_data_out(0) <= i_data(0);
-i_data_out(1) <= i_data(1);
+i_data_out(0) <= i_controls_out(0);
+i_data_out(1) <= i_controls_out(1);
+i_data_out(2) <= i_controls_out(2);
+i_data_out(3) <= i_controls_out(3);
+
+i_data_out(4) <= i_data(0);
+
+i_data_out(5) <= i_data(1);
+i_data_out(6) <= i_data(2);
+i_data_out(7) <= i_data(3);
 
 
 -- </connect_input_output>

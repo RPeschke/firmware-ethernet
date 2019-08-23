@@ -11,11 +11,11 @@ library ieee;
 
 entity SimpleArithmeticTest is
     port (
-        clk       : in std_logic;
-        multiA_in : in std_logic_vector(31 downto 0);
-        multiB_in : in std_logic_vector(31 downto 0);
-        MultiC_out : out std_logic_vector(31 downto 0); 
-        Controller : out std_logic_vector(31 downto 0)
+        clk       : in std_logic := '0';
+        multiA_in : in std_logic_vector(31 downto 0) := (others => '0') ;
+        multiB_in : in std_logic_vector(31 downto 0) := (others => '0');
+        MultiC_out : out std_logic_vector(31 downto 0) := (others => '0'); 
+        Controller : out std_logic_vector(31 downto 0) := (others => '0')
     );
 end SimpleArithmeticTest;
 

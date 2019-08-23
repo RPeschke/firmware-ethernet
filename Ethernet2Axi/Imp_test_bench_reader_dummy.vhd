@@ -76,6 +76,7 @@ begin
     we <= '0';
     reset <= '0';
     fifo_r_s2m.read_enable <='0';
+    valid <= '0';
     timestamp_signal <= timestamp_signal +1;
 
     if reader_state = idle then 
@@ -88,7 +89,7 @@ begin
         end if;
 
     elsif reader_state = make_packet then
-        int_buffer := (packetCounter * 1000 ) +  Index;
+        int_buffer := (packetCounter * 1000 ) +  Index + 100;
         i_data_out(Index) <=  std_logic_vector(to_unsigned(int_buffer, 32)); 
         Index := Index + 1;
        
@@ -103,7 +104,11 @@ begin
             reader_state <= send;
         end if;
     elsif reader_state = send then
+        if fifo_r_s2m.read_enable ='1' then 
+          valid <= '1';
+        end if;
         fifo_r_s2m.read_enable <='1';
+        
     
         packetCounter := packetCounter +1;
         if packetCounter >= Max_word then 
@@ -112,6 +117,7 @@ begin
             reset <= '1';
         end if;
     elsif reader_state = wait_for_idle then
+        
         if timestamp_signal > 100000 then 
             reader_state <= idle;
 
@@ -127,7 +133,7 @@ begin
     end if;
 
     push_axi_stream_32_slave_stream(axi_in,axi_in_s2m);
-    valid <= fifo_r_s2m.read_enable;
+  
     
   end if;
 end process seq;

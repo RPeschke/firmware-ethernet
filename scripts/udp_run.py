@@ -81,7 +81,7 @@ class CsvLoader:
         with open(FileName, newline='') as csvfile:
             
             self.contentLines = csvfile.readlines()
-            self.numberOfRows = len(self.contentLines)-4
+            self.numberOfRows = len(self.contentLines)-3
          
         self.reader = csv.DictReader(FileName)
         self.fieldNames = self.reader.fieldnames 
@@ -90,7 +90,6 @@ class CsvLoader:
         self.index = 0
         self.content = list()
         message = list()
-        message.append(self.numberOfRows)
         message.append(self.numberOfRows)
         message.append(get_index())
         self.content.append(message)
