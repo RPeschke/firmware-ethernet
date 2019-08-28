@@ -4,6 +4,7 @@ import select
 import array
 import csv
 import argparse
+import time
 
 parser = argparse.ArgumentParser(description='Send CSV data to SCROD')
 parser.add_argument('--InputFile', help='Path to where the test bench should be created',default="/home/belle2/Documents/tmp/simplearithmetictest_tb_csv.csv")
@@ -86,13 +87,14 @@ class CsvLoader:
         self.reader = csv.DictReader(FileName)
         self.fieldNames = self.reader.fieldnames 
    
-        self.line = []
-        self.index = 0
+        
+        
         self.content = list()
-        message = list()
-        message.append(self.numberOfRows)
-        message.append(get_index())
-        self.content.append(message)
+        index = get_index()
+        #message = list()
+        #message.append(self.numberOfRows)
+        #message.append(get_index())
+        #self.content.append(message)
         
         lineCount = 0
         for row in self.contentLines:
@@ -102,6 +104,8 @@ class CsvLoader:
         
             message = list()
             #message.append(2)
+            #message.append(0)
+            #message.append(index)
             row=row.strip()
             row = row.replace("\r\n","")
             rowsp = row.split(" ")
@@ -111,8 +115,7 @@ class CsvLoader:
 
 
             self.content.append(message)
-
-
+        
 
 
 
@@ -131,6 +134,8 @@ i = 0
 for row in csv.content:
         scrod1.send(row)
         debug_print([i,row])
+        
+        #time.sleep(1)
         i+= 1
 print("receive data")
 i = 0 

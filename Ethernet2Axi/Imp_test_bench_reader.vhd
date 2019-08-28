@@ -34,10 +34,13 @@ end entity;
 architecture rtl of Imp_test_bench_reader is
 
 
-type state_t is (idle,process_header,make_packet,early_stream_ending, late_stream_ending, send,wait_for_idle);
+type state_t is (idle,process_header,make_packet0, make_packet1,early_stream_ending, late_stream_ending,stream_end, send,wait_for_idle);
+
 
 signal reader_state : state_t := idle;
 
+type op_t is (store_data,send_data);
+signal reader_op : op_t := send_data;
 
 
 signal  timestamp_signal      : slv(31 downto 0) := (others => '0');
@@ -71,7 +74,7 @@ seq : process (Clk) is
   variable axi_in : axi_stream_32_slave_stream := axi_stream_32_slave_stream_null;
   variable int_buffer : integer :=0;
   variable Index : integer :=0;
-  variable packetCounter : integer :=0;
+  variable packet_nr : integer :=0;
   variable rxbuffer      : slv(31 downto 0) := (others => '0');
 begin
   if (rising_edge(Clk)) then
@@ -80,7 +83,7 @@ begin
     we <= '0';
     reset <= '0';
     fifo_r_s2m.read_enable <='0';
-    valid <= '0';
+    valid <= '0' after 1 ns;
     timestamp_signal <= timestamp_signal +1;
     timeOut_signal <= timeOut_signal + 1;
     if reader_state = idle then 
@@ -92,68 +95,61 @@ begin
             reader_state <= process_header;
             timestamp_signal <= (others => '0');
             Index := 0;
-            packetCounter := 0;
+            
         end if;
     elsif reader_state = process_header then
       if isReceivingData(axi_in) then 
         timeOut_signal <= (others => '0');
         read_data(axi_in,rxbuffer);
         if index = 0 then 
-          max_Packet_nr_signal <= rxbuffer;
-         
+           if rxbuffer = 0 then 
+              reader_op <= store_data;
+           else
+              reader_op <= send_data;
+
+           end if;
+        
         elsif index = 1 then
           numStream_signal <= rxbuffer;
+          reader_state <= make_packet0;
+         
         end if;
 
         Index := Index + 1;
 
-        if IsEndOfStream(axi_in) then 
-          reader_state <= make_packet;
-          Index := 0;
-        end if;
+
+      end if;
+    elsif reader_state = make_packet0 then
+      index := 0;
+      i_data_out  <= (others => (others => '0'));
+      reader_state <= make_packet1;
+    elsif reader_state = make_packet1 then
+      if isReceivingData(axi_in) then 
+        read_data(axi_in,rxbuffer);
+        timeOut_signal <= (others => '0');
+        i_data_out(Index) <=  rxbuffer;
+        Index := Index + 1;
+          
+        if IsEndOfStream(axi_in) and Index >= COLNum then
+          -- normal Stream ending
+          reader_state <= stream_end;
+       
+        elsif  Index >= COLNum then
+          -- late stream ebnding
+          reader_state <=  late_stream_ending;
+        elsif  IsEndOfStream(axi_in) then
+          -- early stream ending
+          reader_state <= early_stream_ending;
+        end if ;
+        
       end if;
 
-    elsif reader_state = make_packet then
-        if index = 0 then 
-          i_data_out  <= (others => (others => '0'));
-        end if;
-        if isReceivingData(axi_in) then 
-          read_data(axi_in,rxbuffer);
-          timeOut_signal <= (others => '0');
-          i_data_out(Index) <=  rxbuffer;
-          Index := Index + 1;
-          
-          if IsEndOfStream(axi_in) and Index >= COLNum then
-            -- normal Stream ending
-            index := 0;
-            packetCounter :=packetCounter +1;
-            we <=  '1';
-         
-          elsif  Index >= COLNum then
-            -- late stream ebnding
-            reader_state <=  late_stream_ending;
-          elsif  IsEndOfStream(axi_in) then
-            -- early stream ending
-            reader_state <= early_stream_ending;
-          end if ;
-
-          if packetCounter >= max_Packet_nr_signal then 
-            packetCounter := 0;
-            reader_state <= send;
-          end if;
-                                  
-        elsif timeOut_signal >  10000000   then
-          packetCounter := 0;
-          reader_state <= send;
-        end if;
     elsif reader_state = early_stream_ending then
       i_data_out(Index) <=  (others => '0');
       Index := Index + 1;
       if  Index >= COLNum then
-        index := 0;
-        packetCounter :=packetCounter +1;
-        we <=  '1';
-        reader_state <=  make_packet;
+        reader_state <= stream_end;
+
       end if ;
     elsif reader_state = late_stream_ending then
       -- Flushing stream
@@ -161,37 +157,54 @@ begin
         read_data(axi_in,rxbuffer);
         timeOut_signal <= (others => '0');
         if IsEndOfStream(axi_in) then 
-          index := 0;
-          packetCounter :=packetCounter +1;
-          we <=  '1';
-          reader_state <=  make_packet;
+		
+					reader_state <= stream_end;
+
         end if;
       end if;
 
+    elsif reader_state = stream_end then
+      index := 0;
+          
+      we <=  '1';
+      max_Packet_nr_signal <=  std_logic_vector(to_unsigned(packet_nr, max_Packet_nr_signal'length)); 
+      
+      if reader_op = send_data then 
+        packet_nr := packet_nr + 1;
+        reader_state <= send;
+      else
+        packet_nr := packet_nr + 1;
+        reader_state <= process_header;
+      end if;
+
     elsif reader_state = send then
-        if fifo_r_s2m.read_enable ='1' then 
-          valid <= '1';
-        end if;
+
         fifo_r_s2m.read_enable <='1';
         
+        if packet_nr = 0 then 
+          reader_state <= wait_for_idle;
+        elsif fifo_r_s2m.read_enable ='1' then 
+          valid <= '1' after 1 ns;
+        end if;
+        packet_nr := packet_nr - 1;
+
     
-        packetCounter := packetCounter +1;
-        if packetCounter >= max_Packet_nr_signal then 
-            packetCounter := 0;
-            reader_state <= wait_for_idle;
-            reset <= '1';
-        end if;
-    elsif reader_state = wait_for_idle then
         
-        if timeOut_signal > 200000 then 
-            reader_state <= idle;
 
+    elsif reader_state = wait_for_idle then
+        reset <= '1';
 
+        
+        
+        if timeOut_signal > 10 and IsEndOfStream(axi_in) then 
+          reader_state <= idle;
         end if;
-
+        
         if isReceivingData(axi_in) then 
           read_data(axi_in,rxbuffer);
         end if;
+
+
 
     end if;
 
@@ -199,6 +212,7 @@ begin
     -- flush input
 
 
+	 
     push_axi_stream_32_slave_stream(axi_in,axi_in_s2m);
   
     
