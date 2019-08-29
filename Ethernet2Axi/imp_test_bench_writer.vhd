@@ -29,17 +29,23 @@ entity Imp_test_bench_writer is
 end entity;
 
 architecture Behavioral of Imp_test_bench_writer is 
-     constant BOS : std_logic_vector(31 downto 0) := "00001111111111111111111111111111";
-     constant EOS : std_logic_vector(31 downto 0) := "00001111111111111111111111111110";
+     constant BOS       : std_logic_vector(31 downto 0) := "00001111111111111111111111111111";
+     constant FIFO_FULL  : std_logic_vector(31 downto 0) := "00000000111111111111111111110000";
+     constant EOS       : std_logic_vector(31 downto 0) := "00001111111111111111111111111110";
 
      signal Nr_of_streams : std_logic_vector(31 downto 0) := (others => '0');
      signal  i_data_in     : Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
      signal in_buffer_readEnablde : sl := '0';
      signal in_buffer_empty_v : slv (COLNum -1 downto 0) := (others =>  '0');
      signal in_buffer_empty : sl  := '0';
+	  signal in_buffer_reset : sl  := '0';
      signal  i_fifo_out_m2s :  axi_stream_32_m2s := axi_stream_32_m2s_null;
      signal  i_fifo_out_s2m :  axi_stream_32_s2m := axi_stream_32_s2m_null;
-     signal valid_old :sl := '0';
+     
+
+     signal in_buffer_full_v : slv (COLNum -1 downto 0) := (others =>  '0');
+     signal in_buffer_full : sl  := '0';
+
      function and_reduct(slv : in std_logic_vector) return std_logic is
        variable res_v : std_logic := '1';  -- Null slv vector will also return '1'
      begin
@@ -48,6 +54,22 @@ architecture Behavioral of Imp_test_bench_writer is
        end loop;
        return res_v;
      end function;
+
+
+     function or_reduce( V: std_logic_vector ) return std_ulogic is
+      variable result: std_ulogic;
+    begin
+      for i in V'range loop
+        if i = V'left then
+          result := V(i);
+        else
+          result := result OR V(i);
+        end if;
+        exit when result = '1';
+      end loop;
+      return result;
+    end or_reduce;
+
    begin
      
      tXData <= i_fifo_out_m2s.data;
@@ -60,26 +82,28 @@ architecture Behavioral of Imp_test_bench_writer is
   seq_out : process (Clk) is
     variable  fifo :  FIFO_nativ_stream_reader_32_slave := FIFO_nativ_stream_reader_32_slave_null;
     variable index : integer := COLNum;
-    variable timer : integer := 0;
     variable  dummy_data :  slv(31 downto 0) := (others => '0');
     variable out_fifo : axi_stream_32_master_stream := axi_stream_32_master_stream_null;
 
     variable send_Nr_of_streams : boolean := True;
     variable send_BOS : boolean := True;
+	 variable v_EOS  : std_logic_vector(31 downto 0) := EOS;
   begin
     if rising_edge(clk) then 
-	    valid_old <= valid;
-      if timer > 1000000 then 
-        timer := 0;
-        Nr_of_streams <= (others => '0');
-      end if;
-      timer := timer +1;
+	    
 
-      pull_axi_stream_32_master_stream(out_fifo , i_fifo_out_s2m);
-      in_buffer_readEnablde <= '0';
+
+
+        pull_axi_stream_32_master_stream(out_fifo , i_fifo_out_s2m);
+        in_buffer_readEnablde <= '0';
+		    in_buffer_reset <= '0';
+        
+        if in_buffer_full = '1' then 
+			    v_EOS := FIFO_FULL;
+        end if;
         
         if ready_to_send(out_fifo)  and send_BOS and index <= (COLNum -1) then 
-          send_data(out_fifo,BOS);
+          send_data(out_fifo, BOS);
           send_BOS := false;
         elsif ready_to_send(out_fifo)  and send_Nr_of_streams and index <= (COLNum -1) then 
            send_data(out_fifo,Nr_of_streams);
@@ -88,14 +112,14 @@ architecture Behavioral of Imp_test_bench_writer is
           send_data(out_fifo,i_data_in(index));
 
           index := index + 1;
-          timer := 0;
         elsif  ready_to_send(out_fifo)  and index = (COLNum) then 
-          send_data(out_fifo,EOS);
+          send_data(out_fifo, v_EOS);
           Send_end_Of_Stream(out_fifo);
           Nr_of_streams <= Nr_of_streams+1;
           send_Nr_of_streams := True;
           send_BOS := true;
           index := index + 1;
+			    v_EOS := EOS;
         end if;
         
         if in_buffer_empty = '0' and index > (COLNum ) then
@@ -106,6 +130,9 @@ architecture Behavioral of Imp_test_bench_writer is
           in_buffer_readEnablde <= '1';
           
         end if ;
+        
+
+
         
       push_axi_stream_32_master_stream(out_fifo, i_fifo_out_m2s);
     
@@ -121,10 +148,10 @@ architecture Behavioral of Imp_test_bench_writer is
 
     ) port map (
       clk   => clk,
-      rst   => '0',
+      rst   => in_buffer_reset,
       din   => data_in(i),
       wen   =>  valid,
-      full  => open,
+      full  => in_buffer_full_v(i),
       ren   => in_buffer_readEnablde,
       dout  => i_data_in(i),
       empty => in_buffer_empty_v(i)
@@ -133,5 +160,5 @@ architecture Behavioral of Imp_test_bench_writer is
   end generate gen_DAC_CONTROL;
   
   in_buffer_empty <= and_reduct(in_buffer_empty_v);
-
+  in_buffer_full  <= or_reduce(in_buffer_full_v);
 end architecture;
