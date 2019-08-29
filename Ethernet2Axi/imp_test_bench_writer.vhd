@@ -13,8 +13,8 @@ library ieee;
 
 entity Imp_test_bench_writer is 
   generic ( 
-    COLNum : integer := 10
-
+    COLNum : integer := 10;
+    FIFO_Depts : integer := 10
   );
   port(
     Clk      : in  sl;
@@ -117,7 +117,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
     fifo_i : entity work.fifo_cc generic map (
       DATA_WIDTH => 32,
-      DEPTH => 5 
+      DEPTH => FIFO_Depts
 
     ) port map (
       clk   => clk,

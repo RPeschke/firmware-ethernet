@@ -35,7 +35,7 @@ architecture rtl of simpleArithmetic_ether_test is
      constant COLNum : integer := 4;
      signal i_data :  Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
      signal i_valid      : sl := '0';
-     signal i_controls_out :  Word32Array(3 downto 0) := (others => (others => '0'));
+     signal i_controls_out :  Word32Array(4 downto 0) := (others => (others => '0'));
 
 
      constant COLNum_out : integer := 11;
@@ -81,8 +81,8 @@ DUT :  entity work.simplearithmetictest port map(
   clk => clk,
   multia_in => i_data(1),
   multib_in => i_data(2),
-  multic_out => i_data_out(8),
-  Controller => i_data_out(9)
+  multic_out => i_data_out(9),
+  Controller => i_data_out(10)
 );
 -- </DUT>
 
@@ -101,17 +101,26 @@ DUT :  entity work.simplearithmetictest port map(
 --</data_in_converter>
 
 -- <connect_input_output>
-i_data_out(0) <= i_controls_out(0);
-i_data_out(1) <= i_controls_out(1);
-i_data_out(2) <= i_controls_out(2);
-i_data_out(3) <= i_controls_out(3);
+--i_data_out(0) <= i_controls_out(0);
+--i_data_out(1) <= i_controls_out(1);
+--i_data_out(2) <= i_controls_out(2);
+--i_data_out(3) <= i_controls_out(3);
+--i_data_out(4) <= i_controls_out(4);
 
-i_data_out(4) <= i_data(0);
+slv_to_slv( i_controls_out(0) ,i_data_out(0) );
+slv_to_slv( i_controls_out(1) ,i_data_out(1) );
+slv_to_slv( i_controls_out(2) ,i_data_out(2) );
+slv_to_slv( i_controls_out(3) ,i_data_out(3) );
+slv_to_slv( i_controls_out(4) ,i_data_out(4) );
 
-i_data_out(5) <= i_data(1);
-i_data_out(6) <= i_data(2);
-i_data_out(7) <= i_data(3);
-
+--i_data_out(5) <= i_data(0);
+--i_data_out(6) <= i_data(1);
+--i_data_out(7) <= i_data(2);
+--i_data_out(8) <= i_data(3);
+slv_to_slv( i_data(0) ,i_data_out(5) );
+slv_to_slv( i_data(1) ,i_data_out(6) );
+slv_to_slv( i_data(2) ,i_data_out(7) );
+slv_to_slv( i_data(3) ,i_data_out(8) );
 
 -- </connect_input_output>
 end  rtl ;

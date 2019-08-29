@@ -14,7 +14,8 @@ use work.axi_stream_pgk_32.all;
 
 entity Imp_test_bench_reader is 
 generic ( 
-  COLNum : integer := 10
+  COLNum : integer := 10;
+  FIFO_Depts : integer := 10
         
 );
 port(
@@ -25,7 +26,7 @@ rxDataValid : in  sl := '0';
 rxDataLast  : in  sl := '0';
 rxDataReady : out sl := '0';
 data_out    : out Word32Array(COLNum - 1 downto 0) := (others => (others => '0'));
-controls_out    : out Word32Array(3 downto 0) := (others => (others => '0'));
+controls_out    : out Word32Array(4 downto 0) := (others => (others => '0'));
 valid : out sl := '0'
 );
 end entity;
@@ -33,25 +34,47 @@ end entity;
 
 architecture rtl of Imp_test_bench_reader is
 
+  function or_reduce( V: std_logic_vector ) return std_ulogic is
+    variable result: std_ulogic;
+  begin
+    for i in V'range loop
+      if i = V'left then
+        result := V(i);
+      else
+        result := result OR V(i);
+      end if;
+      exit when result = '1';
+    end loop;
+    return result;
+  end or_reduce;
 
-type state_t is (idle,process_header,make_packet0, make_packet1,early_stream_ending, late_stream_ending,stream_end, send,wait_for_idle);
+type state_t is (
+  fillFifo,
+  send,
+  wait_for_idle,
+  FIFO_FULL
+);
 
 
-signal reader_state : state_t := idle;
-
-type op_t is (store_data,send_data);
-signal reader_op : op_t := send_data;
+signal s_reader_state : state_t := fillFifo;
 
 
 signal  timestamp_signal      : slv(31 downto 0) := (others => '0');
-signal  timeOut_signal      : slv(31 downto 0) := (others => '0');
 
+
+-- packet counter 
 signal  max_Packet_nr_signal      : slv(31 downto 0) := (others => '0');
-signal  numStream_signal      : slv(31 downto 0) := (others => '0');
-signal reset : sl := '0';
+signal  packet_fifo_we            : sl := '0';
+signal  numStream_signal          : slv(31 downto 0) := (others => '0');
+signal packet_counter_w_m2s : FIFO_nativ_write_32_m2s  := FIFO_nativ_write_32_m2s_null;
+signal packet_counter_w_s2m : FIFO_nativ_write_32_s2m  := FIFO_nativ_write_32_s2m_null;
+signal packet_counter_r_m2s : FIFO_nativ_reader_32_m2s := FIFO_nativ_reader_32_m2s_null;
+signal packet_counter_r_s2m : FIFO_nativ_reader_32_s2m := FIFO_nativ_reader_32_s2m_null;
+-- end packet counter
 
-signal axi_in_m2s : axi_stream_32_m2s := axi_stream_32_m2s_null;
-signal axi_in_s2m : axi_stream_32_s2m := axi_stream_32_s2m_null;
+signal  reset : sl := '0';
+
+
 
 
 
@@ -59,218 +82,202 @@ signal axi_in_s2m : axi_stream_32_s2m := axi_stream_32_s2m_null;
 
 signal fifo_r_m2s : FIFO_nativ_reader_32_m2s := FIFO_nativ_reader_32_m2s_null;
 signal fifo_r_s2m : FIFO_nativ_reader_32_s2m := FIFO_nativ_reader_32_s2m_null;
-signal i_data_out    :  Word32Array((COLNum -1) downto 0) := (others => (others => '0'));
-signal we          : sl := '0';
 
 
+signal i_data_out       :  Word32Array((COLNum -1)+2 downto 0) := (others => (others => '0'));
+signal i_data_out_valid : sl := '0';
+
+signal i_fifo_full            :  slv((COLNum -1) downto 0) := (others => '0');
+signal i_fifo_full_or_reduce  :  sl := '0';
+
+signal i_fifo_write_enable  :  sl := '0';
 begin
-axi_in_m2s.data <= rxData;
-axi_in_m2s.last <=rxDataLast;
-axi_in_m2s.valid <= rxDataValid;
-rxDataReady <= axi_in_s2m.ready;
 
+des : entity work.StreamDeserializer generic map (
+  COLNum => COLNum + 2
+) port map ( 
+  Clk    => Clk,
+-- Incoming data
+  rxData      => rxData,
+  rxDataValid => rxDataValid,
+  rxDataLast  => rxDataLast,
+  rxDataReady => rxDataReady,
+  data_out    => i_data_out,
+  valid       => i_data_out_valid
+);
 
-seq : process (Clk) is
-  variable axi_in : axi_stream_32_slave_stream := axi_stream_32_slave_stream_null;
-  variable int_buffer : integer :=0;
-  variable Index : integer :=0;
-  variable packet_nr : integer :=0;
-  variable rxbuffer      : slv(31 downto 0) := (others => '0');
+Fill_FIFO_p : process (Clk) is
+  variable v_reader_state : state_t := fillFifo;
+  variable packet_nr : slv(31 downto 0) := (others => '0');
+  variable packet_nr_fifo : FIFO_nativ_write_32_master := FIFO_nativ_write_32_master_null;
 begin
   if (rising_edge(Clk)) then
-
-    pull_axi_stream_32_slave_stream(axi_in, axi_in_m2s);
-    we <= '0';
+    pull_FIFO_nativ_write_32_master(packet_nr_fifo, packet_counter_w_s2m);
     reset <= '0';
-    fifo_r_s2m.read_enable <='0';
-    valid <= '0' after 1 ns;
-    timestamp_signal <= timestamp_signal +1;
-    timeOut_signal <= timeOut_signal + 1;
-    if reader_state = idle then 
-        i_data_out  <= (others => (others => '0'));
-        max_Packet_nr_signal <= (others => '0');
-        numStream_signal <= (others => '0');
-        if isReceivingData(axi_in)  then 
-            timeOut_signal <= (others => '0');
-            reader_state <= process_header;
-            timestamp_signal <= (others => '0');
-            Index := 0;
-            
-        end if;
-    elsif reader_state = process_header then
-      if isReceivingData(axi_in) then 
-        timeOut_signal <= (others => '0');
-        read_data(axi_in,rxbuffer);
-        if index = 0 then 
-           if rxbuffer = 0 then 
-              reader_op <= store_data;
-           else
-              reader_op <= send_data;
 
-           end if;
-        
-        elsif index = 1 then
-          numStream_signal <= rxbuffer;
-          reader_state <= make_packet0;
-         
-        end if;
-
-        Index := Index + 1;
-
-
-      end if;
-    elsif reader_state = make_packet0 then
-      index := 0;
-      i_data_out  <= (others => (others => '0'));
-      reader_state <= make_packet1;
-    elsif reader_state = make_packet1 then
-      if isReceivingData(axi_in) then 
-        read_data(axi_in,rxbuffer);
-        timeOut_signal <= (others => '0');
-        i_data_out(Index) <=  rxbuffer;
-        Index := Index + 1;
-          
-        if IsEndOfStream(axi_in) and Index >= COLNum then
-          -- normal Stream ending
-          reader_state <= stream_end;
+    timestamp_signal <= timestamp_signal + 1;
+    if v_reader_state = fillFifo then
+      if i_data_out_valid = '1' then
+        packet_nr := packet_nr +1;
        
-        elsif  Index >= COLNum then
-          -- late stream ebnding
-          reader_state <=  late_stream_ending;
-        elsif  IsEndOfStream(axi_in) then
-          -- early stream ending
-          reader_state <= early_stream_ending;
-        end if ;
-        
-      end if;
-
-    elsif reader_state = early_stream_ending then
-      i_data_out(Index) <=  (others => '0');
-      Index := Index + 1;
-      if  Index >= COLNum then
-        reader_state <= stream_end;
-
-      end if ;
-    elsif reader_state = late_stream_ending then
-      -- Flushing stream
-      if isReceivingData(axi_in) then 
-        read_data(axi_in,rxbuffer);
-        timeOut_signal <= (others => '0');
-        if IsEndOfStream(axi_in) then 
-		
-					reader_state <= stream_end;
-
+        if i_data_out(0) > 0 then 
+          v_reader_state := send;
         end if;
       end if;
-
-    elsif reader_state = stream_end then
-      index := 0;
-          
-      we <=  '1';
-      max_Packet_nr_signal <=  std_logic_vector(to_unsigned(packet_nr, max_Packet_nr_signal'length)); 
-      
-      if reader_op = send_data then 
-        packet_nr := packet_nr + 1;
-        reader_state <= send;
-      else
-        packet_nr := packet_nr + 1;
-        reader_state <= process_header;
-      end if;
-
-    elsif reader_state = send then
-
-        fifo_r_s2m.read_enable <='1';
-        
-        if packet_nr = 0 then 
-          reader_state <= wait_for_idle;
-        elsif fifo_r_s2m.read_enable ='1' then 
-          valid <= '1' after 1 ns;
-        end if;
-        packet_nr := packet_nr - 1;
-
-    
-        
-
-    elsif reader_state = wait_for_idle then
-        reset <= '1';
-
-        
-        
-        if timeOut_signal > 10 and IsEndOfStream(axi_in) then 
-          reader_state <= idle;
-        end if;
-        
-        if isReceivingData(axi_in) then 
-          read_data(axi_in,rxbuffer);
-        end if;
-
-
 
     end if;
+    if v_reader_state = send then
 
+      if ready_to_send(packet_nr_fifo) then 
+        write_data(packet_nr_fifo,packet_nr);
+        packet_nr := (others => '0');
+        v_reader_state := fillFifo;
+      end if;
+
+
+    elsif v_reader_state = FIFO_FULL then
+      reset <= '1';
+      v_reader_state := fillFifo;
+      packet_nr := (others => '0');
+    end if;
     
-    -- flush input
-
-
-	 
-    push_axi_stream_32_slave_stream(axi_in,axi_in_s2m);
-  
-    
+    if i_fifo_full_or_reduce = '1'  then 
+      v_reader_state := FIFO_FULL;
+      reset <= '1';
+    end if;
+    s_reader_state <= v_reader_state;
+    push_FIFO_nativ_write_32_master(packet_nr_fifo, packet_counter_w_m2s);
   end if;
-end process seq;
+end process;
 
 
-gen_DAC_CONTROL: for i in 1 to (COLNum -1) generate
+read_fifo_p : process(clk) is
+  variable packet_nr_fifo : FIFO_nativ_step_by_step_reader_32_slave := FIFO_nativ_step_by_step_reader_32_slave_null; 
+  variable packet_nr : slv(31 downto 0) := (others => '0');
+  variable has_data : boolean := false;
+begin
+  if (rising_edge(Clk)) then
+    pull_FIFO_nativ_step_by_step_reader_32_slave(packet_nr_fifo, packet_counter_r_m2s);
+    valid <= '0';
+
+    fifo_r_s2m.read_enable <='0';
+
+    if has_data = false then 
+      if isReceivingData(packet_nr_fifo) then 
+        read_data(packet_nr_fifo, packet_nr);
+        max_Packet_nr_signal <= packet_nr;
+        has_data := true;
+        fifo_r_s2m.read_enable <= '1';
+      end if;
+    else 
+      fifo_r_s2m.read_enable <= '1';
+      packet_nr := packet_nr - 1;
+      valid <= '1' ;
+      if packet_nr = 1 then 
+        has_data := false;
+      
+      end if;
+      
+    end if;
+
+
+    push_FIFO_nativ_step_by_step_reader_32_slave(packet_nr_fifo, packet_counter_r_s2m);
+
+  end if;
+end process;
+
+
+i_fifo_write_enable <= i_data_out_valid when s_reader_state =  fillFifo 
+                       else '0';
+
+
+
+
+gen_DAC_CONTROL: for i in 2 to (COLNum -1)+2 generate
 
 fifo_i : entity work.fifo_cc generic map (
   DATA_WIDTH => 32,
-  DEPTH => 5 
+  DEPTH => FIFO_Depts 
   
 ) port map (
   clk   => clk,
   rst   => reset,
   din   => i_data_out(i),
-  wen   =>  we,
-  full  => open,
+  wen   =>  i_fifo_write_enable,
+  full  => i_fifo_full(i-2),
   ren   => fifo_r_s2m.read_enable,
-  dout  => data_out(i),
+  dout  => data_out(i-2),
   empty => open
 );
 
 end generate gen_DAC_CONTROL;
 
-fifo_i : entity work.fifo_cc generic map (
+i_fifo_full_or_reduce <= or_reduce(i_fifo_full);
+
+OP_fifo_i : entity work.fifo_cc generic map (
   DATA_WIDTH => 32,
-  DEPTH => 5 
+  DEPTH => FIFO_Depts 
 
 ) port map (
   clk   => clk,
   rst   => reset,
   din   => i_data_out(0),
-  wen   =>  we,
+  wen   => i_fifo_write_enable,
   full  => open,
   ren   => fifo_r_s2m.read_enable,
-  dout  => fifo_r_m2s.data,
+  dout  => controls_out(4),
   empty => fifo_r_m2s.empty
 );
 
-data_out(0) <=  fifo_r_m2s.data;
+
+PacketNr_fifo_i : entity work.fifo_cc generic map (
+  DATA_WIDTH => 32,
+  DEPTH => FIFO_Depts 
+
+) port map (
+  clk   => clk,
+  rst   => reset,
+  din   => i_data_out(1),
+  wen   => i_fifo_write_enable,
+  full  => open,
+  ren   => fifo_r_s2m.read_enable,
+  dout  => numStream_signal,
+  empty => open
+);
+
+
 
 
 timestamp_fifo_i : entity work.fifo_cc generic map (
   DATA_WIDTH => 32,
-  DEPTH => 5 
+  DEPTH => FIFO_Depts 
   
 ) port map (
   clk   => clk,
   rst   => reset,
   din   => timestamp_signal,
-  wen   =>  we,
+  wen   =>  i_fifo_write_enable,
   full  => open,
   ren   => fifo_r_s2m.read_enable,
   dout  => controls_out(0),
   empty => open
 );
+
+packet_counter_fifo : entity work.fifo_cc generic map (
+  DATA_WIDTH => 32,
+  DEPTH => FIFO_Depts 
+  
+) port map (
+  clk   => clk,
+  rst   => reset,
+  din   => packet_counter_w_m2s.data,
+  wen   =>  packet_counter_w_m2s.write_enable,
+  full  => packet_counter_w_s2m.full,
+  ren   => packet_counter_r_s2m.read_enable,
+  dout  => packet_counter_r_m2s.data,
+  empty => packet_counter_r_m2s.empty
+);
+
 controls_out(1) <= timestamp_signal;
 controls_out(2) <= max_Packet_nr_signal;
 controls_out(3) <= numStream_signal;
