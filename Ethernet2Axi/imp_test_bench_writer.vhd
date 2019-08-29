@@ -123,7 +123,7 @@ architecture Behavioral of Imp_test_bench_writer is
       clk   => clk,
       rst   => '0',
       din   => data_in(i),
-      wen   =>  valid or valid_old,
+      wen   =>  valid,
       full  => open,
       ren   => in_buffer_readEnablde,
       dout  => i_data_in(i),

@@ -167,13 +167,19 @@ begin
         read_data(packet_nr_fifo, packet_nr);
         max_Packet_nr_signal <= packet_nr;
         has_data := true;
+        
         fifo_r_s2m.read_enable <= '1';
+        
       end if;
     else 
-      fifo_r_s2m.read_enable <= '1';
       packet_nr := packet_nr - 1;
-      valid <= '1' ;
-      if packet_nr = 1 then 
+      
+
+      if packet_nr > 0 then
+        fifo_r_s2m.read_enable <= '1';
+        valid <= '1' ;
+      else 
+        valid <= '1' ;
         has_data := false;
       
       end if;
