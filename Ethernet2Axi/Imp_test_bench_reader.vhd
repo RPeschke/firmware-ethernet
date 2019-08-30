@@ -17,7 +17,7 @@ use work.Imp_test_bench_pgk.all;
 entity Imp_test_bench_reader is 
 generic ( 
   COLNum : integer := 10;
-  FIFO_Depts : integer := 10
+  FIFO_DEPTH : integer := 10
         
 );
 port(
@@ -205,7 +205,7 @@ gen_DAC_CONTROL: for i in 2 to (COLNum -1)+2 generate
 
 fifo_i : entity work.fifo_cc generic map (
   DATA_WIDTH => 32,
-  DEPTH => FIFO_Depts 
+  DEPTH => FIFO_DEPTH 
   
 ) port map (
   clk   => clk,
@@ -224,7 +224,7 @@ i_fifo_full_or_reduce <= or_reduce(i_fifo_full);
 
 OP_fifo_i : entity work.fifo_cc generic map (
   DATA_WIDTH => 32,
-  DEPTH => FIFO_Depts 
+  DEPTH => FIFO_DEPTH 
 
 ) port map (
   clk   => clk,
@@ -240,7 +240,7 @@ OP_fifo_i : entity work.fifo_cc generic map (
 
 PacketNr_fifo_i : entity work.fifo_cc generic map (
   DATA_WIDTH => 32,
-  DEPTH => FIFO_Depts 
+  DEPTH => FIFO_DEPTH 
 
 ) port map (
   clk   => clk,
@@ -258,7 +258,7 @@ PacketNr_fifo_i : entity work.fifo_cc generic map (
 
 timestamp_fifo_i : entity work.fifo_cc generic map (
   DATA_WIDTH => 32,
-  DEPTH => FIFO_Depts 
+  DEPTH => FIFO_DEPTH 
   
 ) port map (
   clk   => clk,
@@ -273,7 +273,7 @@ timestamp_fifo_i : entity work.fifo_cc generic map (
 
 packet_counter_fifo : entity work.fifo_cc generic map (
   DATA_WIDTH => 32,
-  DEPTH => FIFO_Depts 
+  DEPTH => FIFO_DEPTH 
   
 ) port map (
   clk   => clk,

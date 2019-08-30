@@ -64,7 +64,7 @@ generic map (
 u_writer : entity work.Imp_test_bench_writer 
 generic map (
   COLNum => COLNum_out ,
-  FIFO_Depts => 10
+  FIFO_DEPTH => 10
 ) port map (
   Clk      => clk,
   -- Incoming data

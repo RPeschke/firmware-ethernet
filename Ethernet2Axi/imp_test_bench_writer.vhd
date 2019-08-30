@@ -16,7 +16,7 @@ library ieee;
 entity Imp_test_bench_writer is 
   generic ( 
     COLNum : integer := 10;
-    FIFO_Depts : integer := 10
+    FIFO_DEPTH : integer := 10
   );
   port(
     Clk      : in  sl;
@@ -148,7 +148,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
     fifo_i : entity work.fifo_cc generic map (
       DATA_WIDTH => 32,
-      DEPTH => FIFO_Depts
+      DEPTH => FIFO_DEPTH
 
     ) port map (
       clk   => clk,
@@ -166,7 +166,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
   timestamp_recorded_fifo : entity work.fifo_cc generic map (
     DATA_WIDTH => 32,
-    DEPTH => FIFO_Depts
+    DEPTH => FIFO_DEPTH
 
   ) port map (
     clk   => clk,
@@ -181,7 +181,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
   timestamp_send_fifo : entity work.fifo_cc generic map (
     DATA_WIDTH => 32,
-    DEPTH => FIFO_Depts
+    DEPTH => FIFO_DEPTH
 
   ) port map (
     clk   => clk,
@@ -196,7 +196,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
   max_Packet_nr_fifo : entity work.fifo_cc generic map (
     DATA_WIDTH => 32,
-    DEPTH => FIFO_Depts
+    DEPTH => FIFO_DEPTH
 
   ) port map (
     clk   => clk,
@@ -211,7 +211,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
   numStream_nr_fifo : entity work.fifo_cc generic map (
     DATA_WIDTH => 32,
-    DEPTH => FIFO_Depts
+    DEPTH => FIFO_DEPTH
 
   ) port map (
     clk   => clk,
@@ -225,7 +225,7 @@ architecture Behavioral of Imp_test_bench_writer is
   );
   Operation_fifo : entity work.fifo_cc generic map (
     DATA_WIDTH => 32,
-    DEPTH => FIFO_Depts
+    DEPTH => FIFO_DEPTH
 
   ) port map (
     clk   => clk,
