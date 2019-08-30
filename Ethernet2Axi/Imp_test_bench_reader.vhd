@@ -11,6 +11,8 @@ use work.axiDWORDbi_p.all;
 use work.fifo_cc_pgk_32.all;
 use work.type_conversions_pgk.all;
 use work.axi_stream_pgk_32.all;
+use work.Imp_test_bench_pgk.all;
+
 
 entity Imp_test_bench_reader is 
 generic ( 
@@ -21,12 +23,12 @@ generic (
 port(
 Clk      : in  sl := '0';
 -- Incoming data
-rxData      : in  slv(31 downto 0) := (others => '0');
-rxDataValid : in  sl := '0';
-rxDataLast  : in  sl := '0';
-rxDataReady : out sl := '0';
-data_out    : out Word32Array(COLNum - 1 downto 0) := (others => (others => '0'));
-controls_out    : out Word32Array(4 downto 0) := (others => (others => '0'));
+rxData          : in  slv(31 downto 0) := (others => '0');
+rxDataValid     : in  sl := '0';
+rxDataLast      : in  sl := '0';
+rxDataReady     : out sl := '0';
+data_out        : out Word32Array(COLNum - 1 downto 0) := (others => (others => '0'));
+controls_out    : out Imp_test_bench_reader_Control_t  := Imp_test_bench_reader_Control_t_null;
 valid : out sl := '0'
 );
 end entity;
@@ -231,7 +233,7 @@ OP_fifo_i : entity work.fifo_cc generic map (
   wen   => i_fifo_write_enable,
   full  => open,
   ren   => fifo_r_s2m.read_enable,
-  dout  => controls_out(4),
+  dout  => controls_out.Operation, -- controls_out(4)
   empty => fifo_r_m2s.empty
 );
 
@@ -265,7 +267,7 @@ timestamp_fifo_i : entity work.fifo_cc generic map (
   wen   =>  i_fifo_write_enable,
   full  => open,
   ren   => fifo_r_s2m.read_enable,
-  dout  => controls_out(0),
+  dout  => controls_out.timestampRec, -- controls_out(0)
   empty => open
 );
 
@@ -284,7 +286,7 @@ packet_counter_fifo : entity work.fifo_cc generic map (
   empty => packet_counter_r_m2s.empty
 );
 
-controls_out(1) <= timestamp_signal;
-controls_out(2) <= max_Packet_nr_signal;
-controls_out(3) <= numStream_signal;
+controls_out.timestampSend  <= timestamp_signal; -- controls_out(1)
+controls_out.maxPacketNr    <= max_Packet_nr_signal;  -- controls_out(2)
+controls_out.numStream      <= numStream_signal; -- controls_out(3)
 end architecture;

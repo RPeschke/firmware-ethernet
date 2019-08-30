@@ -10,6 +10,8 @@ library ieee;
   use work.fifo_cc_pgk_32.all;
   use work.type_conversions_pgk.all;
   use work.axi_stream_pgk_32.all;
+  use work.Imp_test_bench_pgk.all;
+  
 
 entity Imp_test_bench_writer is 
   generic ( 
@@ -24,6 +26,7 @@ entity Imp_test_bench_writer is
     txDataLast  : out  sl;
     txDataReady : in sl;
     data_in     : in Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
+    controls_in : in Imp_test_bench_reader_Control_t  := Imp_test_bench_reader_Control_t_null;
     Valid      : in sl
   );
 end entity;
@@ -34,16 +37,17 @@ architecture Behavioral of Imp_test_bench_writer is
      constant EOS       : std_logic_vector(31 downto 0) := "00001111111111111111111111111110";
 
      signal Nr_of_streams : std_logic_vector(31 downto 0) := (others => '0');
-     signal  i_data_in     : Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
+     signal i_data_in     : Word32Array(COLNum -1 + Imp_test_bench_reader_Control_t_length downto 0) := (others => (others => '0'));
+     signal i_controls_in : Imp_test_bench_reader_Control_t  := Imp_test_bench_reader_Control_t_null;
      signal in_buffer_readEnablde : sl := '0';
-     signal in_buffer_empty_v : slv (COLNum -1 downto 0) := (others =>  '0');
+     signal in_buffer_empty_v : slv (COLNum -1 + Imp_test_bench_reader_Control_t_length downto 0) := (others =>  '0');
      signal in_buffer_empty : sl  := '0';
 	  signal in_buffer_reset : sl  := '0';
      signal  i_fifo_out_m2s :  axi_stream_32_m2s := axi_stream_32_m2s_null;
      signal  i_fifo_out_s2m :  axi_stream_32_s2m := axi_stream_32_s2m_null;
      
 
-     signal in_buffer_full_v : slv (COLNum -1 downto 0) := (others =>  '0');
+     signal in_buffer_full_v : slv (COLNum -1 + Imp_test_bench_reader_Control_t_length downto 0) := (others =>  '0');
      signal in_buffer_full : sl  := '0';
 
      function and_reduct(slv : in std_logic_vector) return std_logic is
@@ -81,7 +85,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
   seq_out : process (Clk) is
     variable  fifo :  FIFO_nativ_stream_reader_32_slave := FIFO_nativ_stream_reader_32_slave_null;
-    variable index : integer := COLNum;
+    variable index : integer := i_data_in'length +1;
     variable  dummy_data :  slv(31 downto 0) := (others => '0');
     variable out_fifo : axi_stream_32_master_stream := axi_stream_32_master_stream_null;
 
@@ -102,17 +106,17 @@ architecture Behavioral of Imp_test_bench_writer is
 			    v_EOS := FIFO_FULL;
         end if;
         
-        if ready_to_send(out_fifo)  and send_BOS and index <= (COLNum -1) then 
+        if ready_to_send(out_fifo)  and send_BOS and index <= (i_data_in'length -1) then 
           send_data(out_fifo, BOS);
           send_BOS := false;
-        elsif ready_to_send(out_fifo)  and send_Nr_of_streams and index <= (COLNum -1) then 
+        elsif ready_to_send(out_fifo)  and send_Nr_of_streams and index <= (i_data_in'length -1) then 
            send_data(out_fifo,Nr_of_streams);
            send_Nr_of_streams := false;
-        elsif ready_to_send(out_fifo)  and index <= (COLNum -1) then 
+        elsif ready_to_send(out_fifo)  and index <= (i_data_in'length -1) then 
           send_data(out_fifo,i_data_in(index));
 
           index := index + 1;
-        elsif  ready_to_send(out_fifo)  and index = (COLNum) then 
+        elsif  ready_to_send(out_fifo)  and index = (i_data_in'length) then 
           send_data(out_fifo, v_EOS);
           Send_end_Of_Stream(out_fifo);
           Nr_of_streams <= Nr_of_streams+1;
@@ -122,11 +126,11 @@ architecture Behavioral of Imp_test_bench_writer is
 			    v_EOS := EOS;
         end if;
         
-        if in_buffer_empty = '0' and index > (COLNum ) then
+        if in_buffer_empty = '0' and index > (i_data_in'length ) then
           index :=0;
         end if ;
 
-        if in_buffer_empty = '0' and index = COLNum-1 then
+        if in_buffer_empty = '0' and index = i_data_in'length-1 then
           in_buffer_readEnablde <= '1';
           
         end if ;
@@ -140,7 +144,7 @@ architecture Behavioral of Imp_test_bench_writer is
   end process;
 
   
-  gen_DAC_CONTROL: for i in 0 to (COLNum -1) generate
+  gen_DAC_CONTROL: for i in 0 to (COLNum -1)  generate
 
     fifo_i : entity work.fifo_cc generic map (
       DATA_WIDTH => 32,
@@ -151,14 +155,88 @@ architecture Behavioral of Imp_test_bench_writer is
       rst   => in_buffer_reset,
       din   => data_in(i),
       wen   =>  valid,
-      full  => in_buffer_full_v(i),
+      full  => in_buffer_full_v(i+Imp_test_bench_reader_Control_t_length),
       ren   => in_buffer_readEnablde,
-      dout  => i_data_in(i),
-      empty => in_buffer_empty_v(i)
+      dout  => i_data_in(i+Imp_test_bench_reader_Control_t_length),
+      empty => in_buffer_empty_v(i+Imp_test_bench_reader_Control_t_length)
     );
 
   end generate gen_DAC_CONTROL;
   
+
+  timestamp_recorded_fifo : entity work.fifo_cc generic map (
+    DATA_WIDTH => 32,
+    DEPTH => FIFO_Depts
+
+  ) port map (
+    clk   => clk,
+    rst   => in_buffer_reset,
+    din   => controls_in.timestampRec,
+    wen   =>  valid,
+    full  => in_buffer_full_v(0),
+    ren   => in_buffer_readEnablde,
+    dout  => i_data_in(0),
+    empty => in_buffer_empty_v(0)
+  );
+
+  timestamp_send_fifo : entity work.fifo_cc generic map (
+    DATA_WIDTH => 32,
+    DEPTH => FIFO_Depts
+
+  ) port map (
+    clk   => clk,
+    rst   => in_buffer_reset,
+    din   => controls_in.timestampSend,
+    wen   =>  valid,
+    full  => in_buffer_full_v(1),
+    ren   => in_buffer_readEnablde,
+    dout  => i_data_in(1),
+    empty => in_buffer_empty_v(1)
+  );
+
+  max_Packet_nr_fifo : entity work.fifo_cc generic map (
+    DATA_WIDTH => 32,
+    DEPTH => FIFO_Depts
+
+  ) port map (
+    clk   => clk,
+    rst   => in_buffer_reset,
+    din   => controls_in.maxPacketNr,
+    wen   =>  valid,
+    full  => in_buffer_full_v(2),
+    ren   => in_buffer_readEnablde,
+    dout  => i_data_in(2),
+    empty => in_buffer_empty_v(2)
+  );
+
+  numStream_nr_fifo : entity work.fifo_cc generic map (
+    DATA_WIDTH => 32,
+    DEPTH => FIFO_Depts
+
+  ) port map (
+    clk   => clk,
+    rst   => in_buffer_reset,
+    din   => controls_in.numStream,
+    wen   =>  valid,
+    full  => in_buffer_full_v(3),
+    ren   => in_buffer_readEnablde,
+    dout  => i_data_in(3),
+    empty => in_buffer_empty_v(3)
+  );
+  Operation_fifo : entity work.fifo_cc generic map (
+    DATA_WIDTH => 32,
+    DEPTH => FIFO_Depts
+
+  ) port map (
+    clk   => clk,
+    rst   => in_buffer_reset,
+    din   => controls_in.Operation,
+    wen   =>  valid,
+    full  => in_buffer_full_v(4),
+    ren   => in_buffer_readEnablde,
+    dout  => i_data_in(4),
+    empty => in_buffer_empty_v(4)
+  );
   in_buffer_empty <= and_reduct(in_buffer_empty_v);
   in_buffer_full  <= or_reduce(in_buffer_full_v);
 end architecture;
