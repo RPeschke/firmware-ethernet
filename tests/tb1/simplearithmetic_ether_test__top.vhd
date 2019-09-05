@@ -94,7 +94,8 @@ begin
   
   u_reader : entity work.Imp_test_bench_reader 
     generic map (
-      COLNum => COLNum 
+      COLNum => COLNum ,
+      FIFO_DEPTH => 15
     ) port map (
       Clk       => fabClk,
       -- Incoming data
@@ -108,7 +109,8 @@ begin
 
   u_writer : entity work.Imp_test_bench_writer 
     generic map (
-      COLNum => COLNum_out 
+      COLNum => COLNum_out ,
+      FIFO_DEPTH => 15
     ) port map (
       Clk      => fabClk,
       -- Incoming data

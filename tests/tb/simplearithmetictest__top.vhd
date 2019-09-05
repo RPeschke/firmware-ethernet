@@ -36,15 +36,26 @@ architecture rtl of simplearithmetictest_top is
   
   signal fabClk       : sl := '0';
   -- User Data interfaces
-  signal  TxDataChannels :  DWORD := (others => '0');
-  signal  TxDataValids   :  sl := '0';
-  signal  TxDataLasts    :  sl := '0';
-  signal  TxDataReadys   :  sl := '0';
-  signal  RxDataChannels :  DWORD := (others => '0');
-  signal  RxDataValids   :  sl := '0';
-  signal  RxDataLasts    :  sl := '0';
-  signal  RxDataReadys   :  sl := '0';
+  signal  RxDataChannel :  DWORD := (others => '0');
+  signal  RxDataValid   :  sl := '0';
+  signal  RxDataLast    :  sl := '0';
+  signal  RxDataReady   :  sl := '0';
   
+
+  
+  
+  signal  TxDataChannel :  DWORD := (others => '0');
+  signal  TxDataValid   :  sl := '0';
+  signal  TxDataLast    :  sl := '0';
+  signal  TxDataReady   :  sl := '0';
+  
+
+  signal  TxDataChannel1 :  DWORD := (others => '0');
+  signal  TxDataValid1   :  sl := '0';
+  signal  TxDataLast1    :  sl := '0';
+  signal  TxDataReady1   :  sl := '0';
+  
+
    constant COLNum : integer :=4;
    signal i_data :  Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
    signal i_controls_out    : Imp_test_bench_reader_Control_t  := Imp_test_bench_reader_Control_t_null;
@@ -61,8 +72,8 @@ architecture rtl of simplearithmetictest_top is
 	     constant NUM_IP_G        : integer := 2;
      
 
-  
-     signal ethClk125    : sl;
+     signal clk62p5  : sl :='0';
+  --   signal ethClk125    : sl;
      
      signal ethCoreMacAddr : MacAddrType := MAC_ADDR_DEFAULT_C;
      
@@ -97,10 +108,47 @@ begin
   U_IBUFGDS : IBUFGDS port map ( I => fabClkP, IB => fabClkN, O => fabClk);
 
 
+--	clk_div :process( fabClk) is 
+--	
+--	begin 
+--	if rising_edge(fabClk) then
+--		clk62p5  <= not clk62p5;
+--	end if;
+--	
+--	end process;
+--
+--inFifo :   entity work.axi_fifo port map(
+--  
+--    m_aclk => clk62p5,
+--    s_aclk => fabClk, 
+--    s_aresetn => '0',
+--    s_axis_tvalid => RxDataValids125,
+--    s_axis_tready => RxDataReadys125,
+--    s_axis_tdata => RxDataChannels125,
+--    s_axis_tlast => RxDataLasts125,
+--    m_axis_tvalid => RxDataValids62,
+--    m_axis_tready => RxDataReadys62,
+--    m_axis_tdata => RxDataChannels62,
+--    m_axis_tlast => RxDataLasts62
+--  
+--);
 
-
-
-  
+--OutFifo :   entity work.axi_fifo port map(
+--  
+--    m_aclk => fabClk ,
+--    s_aclk => clk62p5, 
+--    s_aresetn => '0',
+--    s_axis_tvalid => TxDataValids62,
+--    s_axis_tready => TxDataReadys62,
+--    s_axis_tdata => TxDataChannels62,
+--    s_axis_tlast => TxDataLasts62,
+--    m_axis_tvalid => TxDataValids125,
+--    m_axis_tready => TxDataReadys125,
+--    m_axis_tdata => TxDataChannels125,
+--    m_axis_tlast => TxDataLasts125
+--  
+--);
+--  
 
   --------------------------------
   -- Gigabit Ethernet Interface --
@@ -122,8 +170,8 @@ begin
       -- SFP transceiver disable pin
       txDisable       => txDisable,
       -- Clocks out from Ethernet core
-      ethUsrClk62     => open,
-      ethUsrClk125    => ethClk125,
+      ethUsrClk62     => clk62p5,
+      ethUsrClk125    => open,
       -- Status and diagnostics out
       ethSync         => open,
       ethReady        => open,
@@ -133,7 +181,7 @@ begin
       ipAddrs         => (0 => ethCoreIpAddr, 1 => ethCoreIpAddr1),
       udpPorts        => (0 => x"07D0",       1 => udpPort), --x7D0 = 2000,
       -- User clock inputs
-      userClk         => ethClk125,
+      userClk         => clk62p5,
       userRstIn       => '0',
       userRstOut      => userRst,
       -- User data interfaces
@@ -161,7 +209,7 @@ begin
   U_TpGenTx : entity work.TpGenTx
     port map (
       -- User clock and reset
-      userClk         => ethClk125,
+      userClk         => clk62p5,
       userRst         => userRst,
       -- Configuration
       waitCycles      => waitCyclesHigh & waitCyclesLow,
@@ -173,43 +221,71 @@ begin
       userTxDataReady => tpDataReady
     );
   
-  userTxDataChannels(1) <=  TxDataChannels ;
-  userTxDataValids(1)   <=  TxDataValids;
-  userTxDataLasts(1)    <=  TxDataLasts;
-  TxDataReadys          <=  userTxDataReadys(1);
+  userTxDataChannels(1) <=  TxDataChannel;
+  userTxDataValids(1)   <=  TxDataValid;
+  userTxDataLasts(1)    <=  TxDataLast;
+  TxDataReady           <=  userTxDataReadys(1);
   
-  RxDataChannels        <=  userRxDataChannels(1);
-  RxDataValids          <=  userRxDataValids(1);
-  RxDataLasts           <=  userRxDataLasts(1);
-  userRxDataReadys(1)   <=  RxDataReadys;          
+    
+  RxDataChannel        <=  userRxDataChannels(1);
+  RxDataValid          <=  userRxDataValids(1);
+  RxDataLast           <=  userRxDataLasts(1);
+  userRxDataReadys(1)      <=  RxDataReady;          
   
+
   
+
+
   
-  u_reader : entity work.Imp_test_bench_reader
+
+
+  u_reader : entity work.Imp_test_bench_reader_dummy
     generic map (
-      COLNum => COLNum 
+      COLNum => COLNum,
+		FIFO_DEPTH => 11
     ) port map (
-      Clk       => fabClk,
+      Clk       => clk62p5,
       -- Incoming data
-      rxData      => RxDataChannels,
-      rxDataValid => RxDataValids,
-      rxDataLast  => RxDataLasts,
-      rxDataReady => RxDataReadys,
+      rxData      => RxDataChannel,
+      rxDataValid => RxDataValid,
+      rxDataLast  => RxDataLast,
+      rxDataReady => RxDataReady,
       data_out    => i_data,
       valid => i_valid,
       controls_out => i_controls_out
     );
 
+
+
+throt: entity work.axiStreamThrottle   
+generic map (
+  max_counter => 100 ,
+  wait_time   =>  10000
+)  port map (
+  clk           => clk62p5,
+  rxData        => TxDataChannel1,
+  rxDataValid   => txDataValid1,
+  rxDataLast    => txDataLast1,
+  rxDataReady   => txDataReady1,
+
+  tXData          => TxDataChannel,
+  txDataValid     => TxDataValid,
+  txDataLast      => TxDataLast,
+  txDataReady     => TxDataReady
+);
+
+
   u_writer : entity work.Imp_test_bench_writer 
     generic map (
-      COLNum => COLNum_out 
-    ) port map (
-      Clk      => fabClk,
+      COLNum => COLNum_out,
+		FIFO_DEPTH => 11
+		) port map (
+      Clk      => clk62p5,
       -- Incoming data
-      tXData      =>  TxDataChannels,
-      txDataValid =>  TxDataValids,
-      txDataLast  =>  TxDataLasts,
-      txDataReady =>  TxDataReadys,
+      tXData      =>  TxDataChannel1,
+      txDataValid =>  TxDataValid1,
+      txDataLast  =>  TxDataLast1,
+      txDataReady =>  TxDataReady1,
       data_in    => i_data_out,
       controls_in => i_controls_out,
       Valid      => i_valid
@@ -219,7 +295,7 @@ begin
 
 -- <DUT>
     DUT :  entity work.simplearithmetictest port map(
-  clk => fabClk,
+  clk => clk62p5 ,
   multia_in => i_data(1),
   multib_in => i_data(2),
   multic_out => i_data_out(4),

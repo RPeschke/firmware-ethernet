@@ -30,7 +30,10 @@ end simpleArithmetic_ether_test;
 
 architecture rtl of simpleArithmetic_ether_test is
    
-
+  signal  txDataOut1   : std_logic_vector(31 downto 0) := (others => '0');
+  signal  txDataValid1 : std_logic := '0';
+  signal  txDataLast1  : std_logic := '0';
+  signal  txDataReady1 : std_logic := '0';
     
      constant COLNum : integer := 4;
      signal i_data :  Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
@@ -46,7 +49,7 @@ architecture rtl of simpleArithmetic_ether_test is
      signal data_out : simplearithmetictest_writer_rec := simplearithmetictest_writer_rec_null;
 begin
   
-u_reader : entity work.Imp_test_bench_reader
+u_reader : entity work.Imp_test_bench_reader_dummy
 generic map (
   COLNum => COLNum 
 ) port map (
@@ -57,8 +60,8 @@ generic map (
   rxDataLast  => rxDataLast,
   rxDataReady => rxDataReady,
   data_out    => i_data,
-  valid => i_valid,
-  controls_out => i_controls_out
+  controls_out => i_controls_out,
+  valid => i_valid
 );
 
 u_writer : entity work.Imp_test_bench_writer 
@@ -68,15 +71,30 @@ generic map (
 ) port map (
   Clk      => clk,
   -- Incoming data
-  tXData      =>  txDataOut,
-  txDataValid =>  txDataValid,
-  txDataLast  =>  txDataLast,
-  txDataReady =>  txDataReady,
+  tXData      =>  txDataOut1,
+  txDataValid =>  txDataValid1,
+  txDataLast  =>  txDataLast1,
+  txDataReady =>  txDataReady1,
   data_in    => i_data_out,
   controls_in => i_controls_out,
   Valid      => i_valid
 );
 
+throt: entity work.axiStreamThrottle   
+generic map (
+  max_counter => 10 
+)  port map (
+  clk           => clk,
+  rxData        => txDataOut1,
+  rxDataValid   => txDataValid1,
+  rxDataLast    => txDataLast1,
+  rxDataReady   => txDataReady1,
+
+  tXData          => txDataOut,
+  txDataValid     => txDataValid,
+  txDataLast      => txDataLast,
+  txDataReady     => txDataReady
+);
 
 -- <DUT>
 DUT :  entity work.simplearithmetictest port map(

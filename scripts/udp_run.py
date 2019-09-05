@@ -6,6 +6,7 @@ import csv
 import argparse
 import time
 
+
 parser = argparse.ArgumentParser(description='Send CSV data to SCROD')
 parser.add_argument('--InputFile', help='Path to where the test bench should be created',default="/home/belle2/Documents/tmp/simplearithmetictest_tb_csv.csv")
 parser.add_argument('--OutputFile', help='Name of the entity Test bench',default="data_out.csv")
@@ -104,18 +105,28 @@ class CsvLoader:
         
             message = list()
             #message.append(2)
-            #message.append(0)
-            #message.append(index)
+            message.append(0)
+            message.append(index)
             row=row.strip()
             row = row.replace("\r\n","")
-            rowsp = row.split(" ")
+            rowsp = row.split(",")
             for coll in rowsp:
    
                 message.append(int(coll))
 
 
+
+
             self.content.append(message)
-        
+
+        message = list()
+        message.append(1)
+        message.append(index)
+        message.append(0)
+        message.append(0)
+        message.append(0)
+        message.append(0)    
+        self.content.append(message)    
 
 
 
@@ -139,17 +150,22 @@ for row in csv.content:
         i+= 1
 print("receive data")
 i = 0 
+startTime = time.time()
+print(startTime)
 with open(args.OutputFile,"w",newline="") as f:
-    while scrod1.hasData():
-        data = scrod1.receive()
-        line = ""
-        start = ""
-        for d in data:
-            line += start + str(int(d,16)) 
-            start = "; "
-        f.write(line+"\n")
-        debug_print([i,line])
-        i+= 1
+    
+    while time.time() - startTime < 0.5:
+        if scrod1.hasData():
+            data = scrod1.receive()
+            line = ""
+            start = ""
+            for d in data:
+                line += start + str(int(d,16)) 
+                start = "; "
+            f.write(line+"\n")
+            debug_print([i,line])
+            i+= 1
 
-
+endTime = time.time()
+print(endTime, endTime -startTime )
 print("end")

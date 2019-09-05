@@ -18,7 +18,7 @@ end entity;
 
 architecture Behavioral of simplearithmetic_ether_test_reader_et is 
 constant  NUM_COL : integer := 4;
-signal csv_r_data : t_integer_array(NUM_COL downto 0)  := (others=>0)  ;begin
+signal csv_r_data : c_integer_array(NUM_COL downto 0)  := (others=>0)  ;begin
 
 csv_r :entity  work.csv_read_file 
     generic map (

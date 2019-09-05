@@ -18,7 +18,7 @@ end entity;
 
 architecture Behavioral of simplearithmetic_ether_test_writer_et is 
 constant  NUM_COL : integer := 8 ;
-signal data_int : t_integer_array(NUM_COL downto 0)  := (others=>0)  ;
+signal data_int : c_integer_array(NUM_COL downto 0)  := (others=>0)  ;
 begin
 
 csv_w : entity  work.csv_write_file 
