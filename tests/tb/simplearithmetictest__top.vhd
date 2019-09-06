@@ -239,7 +239,7 @@ begin
   
 
 
-  u_reader : entity work.Imp_test_bench_reader_dummy
+  u_reader : entity work.Imp_test_bench_reader
     generic map (
       COLNum => COLNum,
 		FIFO_DEPTH => 11
@@ -259,8 +259,8 @@ begin
 
 throt: entity work.axiStreamThrottle   
 generic map (
-  max_counter => 100 ,
-  wait_time   =>  10000
+  max_counter => 10 ,
+  wait_time   =>  100000
 )  port map (
   clk           => clk62p5,
   rxData        => TxDataChannel1,

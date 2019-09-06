@@ -154,17 +154,16 @@ startTime = time.time()
 print(startTime)
 with open(args.OutputFile,"w",newline="") as f:
     
-    while time.time() - startTime < 0.5:
-        if scrod1.hasData():
-            data = scrod1.receive()
-            line = ""
-            start = ""
-            for d in data:
-                line += start + str(int(d,16)) 
-                start = "; "
-            f.write(line+"\n")
-            debug_print([i,line])
-            i+= 1
+    while scrod1.hasData():
+        data = scrod1.receive()
+        line = ""
+        start = ""
+        for d in data:
+            line += start + str(int(d,16)) 
+            start = "; "
+        f.write(line+"\n")
+        debug_print([i,line])
+        i+= 1
 
 endTime = time.time()
 print(endTime, endTime -startTime )
