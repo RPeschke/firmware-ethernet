@@ -111,8 +111,8 @@ class CsvLoader:
             row = row.replace("\r\n","")
             rowsp = row.split(",")
             for coll in rowsp:
-   
-                message.append(int(coll))
+                if coll:
+                    message.append(int(coll))
 
 
 

@@ -188,10 +188,10 @@ architecture Behavioral of Imp_test_bench_writer is
     rst   => in_buffer_reset,
     din   => controls_in.timestampSend,
     wen   =>  valid,
-    full  => in_buffer_full_v(1),
+    full  => in_buffer_full_v(4),
     ren   => in_buffer_readEnablde,
-    dout  => i_data_in(1),
-    empty => in_buffer_empty_v(1)
+    dout  => i_data_in(4),
+    empty => in_buffer_empty_v(4)
   );
 
   max_Packet_nr_fifo : entity work.fifo_cc generic map (
@@ -232,10 +232,10 @@ architecture Behavioral of Imp_test_bench_writer is
     rst   => in_buffer_reset,
     din   => controls_in.Operation,
     wen   =>  valid,
-    full  => in_buffer_full_v(4),
+    full  => in_buffer_full_v( 1 ),
     ren   => in_buffer_readEnablde,
-    dout  => i_data_in(4),
-    empty => in_buffer_empty_v(4)
+    dout  => i_data_in(1),
+    empty => in_buffer_empty_v(1)
   );
   in_buffer_empty <= and_reduct(in_buffer_empty_v);
   in_buffer_full  <= or_reduce(in_buffer_full_v);
