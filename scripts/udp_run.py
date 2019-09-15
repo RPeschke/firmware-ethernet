@@ -5,12 +5,15 @@ import array
 import csv
 import argparse
 import time
-
+import os
 
 parser = argparse.ArgumentParser(description='Send CSV data to SCROD')
 parser.add_argument('--InputFile', help='Path to where the test bench should be created',default="/home/belle2/Documents/tmp/simplearithmetictest_tb_csv.csv")
 parser.add_argument('--OutputFile', help='Name of the entity Test bench',default="data_out.csv")
 parser.add_argument('--Verbose', help='Name of the entity Test bench',default="false")
+parser.add_argument('--IpAddress', help='Ip Address of the Scrod',default="192.168.1.33")
+parser.add_argument('--port', help='Port of the Scrod',default=2001)
+
 
 args = parser.parse_args()
 
@@ -39,7 +42,7 @@ class SCROD_ethernet:
 
     def __init__(self,IpAddress,PortNumber):
         self.IpAddress = IpAddress
-        self.PortNumber = PortNumber
+        self.PortNumber = int(PortNumber)
         self.clientSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     
     def send(self,Data):
@@ -135,8 +138,8 @@ class CsvLoader:
 
 
 
-
-scrod1 = SCROD_ethernet("192.168.1.33",2001)
+os.remove(args.OutputFile)
+scrod1 = SCROD_ethernet(args.IpAddress,args.port)
 scrod1.hasData()
 csv = CsvLoader(args.InputFile)
 
