@@ -87,6 +87,7 @@ class CsvLoader:
             
             self.contentLines = csvfile.readlines()
             self.numberOfRows = len(self.contentLines)-3
+            print(self.numberOfRows)
          
         self.reader = csv.DictReader(FileName)
         self.fieldNames = self.reader.fieldnames 
@@ -102,6 +103,9 @@ class CsvLoader:
         
         lineCount = 0
         for row in self.contentLines:
+            if lineCount > 900:
+                break
+
             lineCount+=1
             if lineCount < 3:
                 continue
@@ -137,8 +141,12 @@ class CsvLoader:
 
 
 
+try:
+    os.remove(args.OutputFile)
+except:
+    print ( "output file not found")
 
-os.remove(args.OutputFile)
+    
 scrod1 = SCROD_ethernet(args.IpAddress,args.port)
 scrod1.hasData()
 csv = CsvLoader(args.InputFile)
@@ -170,4 +178,6 @@ with open(args.OutputFile,"w",newline="") as f:
 
 endTime = time.time()
 print(endTime, endTime -startTime )
-print("end")
+print("----end udp_run script----")
+
+
