@@ -103,7 +103,7 @@ class CsvLoader:
         
         lineCount = 0
         for row in self.contentLines:
-            if lineCount > 900:
+            if lineCount > 1000:
                 break
 
             lineCount+=1
@@ -178,6 +178,7 @@ with open(args.OutputFile,"w",newline="") as f:
 
 endTime = time.time()
 print(endTime, endTime -startTime )
+print("number of received packages: ",i)
 print("----end udp_run script----")
 
 
