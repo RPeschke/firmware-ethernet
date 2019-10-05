@@ -42,12 +42,12 @@ architecture rtl of zero_supression_test_connection_eth is
   signal  i_TxDataReadys   :  sl := '0';
 
   constant FIFO_DEPTH : integer := 10;
-  constant COLNum : integer := 11;
+  constant COLNum : integer := 12;
   signal i_data :  Word32Array(COLNum -1 downto 0) := (others => (others => '0'));
   signal i_controls_out    : Imp_test_bench_reader_Control_t  := Imp_test_bench_reader_Control_t_null;
   signal i_valid      : sl := '0';
    
-  constant COLNum_out : integer := 23;
+  constant COLNum_out : integer := 24;
   signal i_data_out :  Word32Array(COLNum_out -1 downto 0) := (others => (others => '0'));
    
 
@@ -117,6 +117,7 @@ throttel : entity work.axiStreamThrottle
   tomanychangeserror_a2z => data_out.tomanychangeserror_a2z,
   data_out => data_out.data_out,
   valid_out => data_out.valid_out,
+  ready_out => data_out.ready_out,
   tomanychangeserror_z2a => data_out.tomanychangeserror_z2a
 );
 -- </DUT>
@@ -146,23 +147,25 @@ slv_to_slv(data_out.data_out(6), i_data_out(18) );
 slv_to_slv(data_out.data_out(7), i_data_out(19) );
 slv_to_slv(data_out.data_out(8), i_data_out(20) );
 sl_to_slv(data_out.valid_out, i_data_out(21) );
-sl_to_slv(data_out.tomanychangeserror_z2a, i_data_out(22) );
+sl_to_slv(data_out.ready_out, i_data_out(22) );
+sl_to_slv(data_out.tomanychangeserror_z2a, i_data_out(23) );
 
 --  </data_out_converter>
 
 -- <data_in_converter> 
 
 slv_to_sl(i_data(0), data_in.rst);
-slv_to_slv ( 31 downto 0 )(i_data(1), data_in.data_in(0));
-slv_to_slv ( 31 downto 0 )(i_data(2), data_in.data_in(1));
-slv_to_slv ( 31 downto 0 )(i_data(3), data_in.data_in(2));
-slv_to_slv ( 31 downto 0 )(i_data(4), data_in.data_in(3));
-slv_to_slv ( 31 downto 0 )(i_data(5), data_in.data_in(4));
-slv_to_slv ( 31 downto 0 )(i_data(6), data_in.data_in(5));
-slv_to_slv ( 31 downto 0 )(i_data(7), data_in.data_in(6));
-slv_to_slv ( 31 downto 0 )(i_data(8), data_in.data_in(7));
-slv_to_slv ( 31 downto 0 )(i_data(9), data_in.data_in(8));
+slv_to_slv(i_data(1), data_in.data_in(0));
+slv_to_slv(i_data(2), data_in.data_in(1));
+slv_to_slv(i_data(3), data_in.data_in(2));
+slv_to_slv(i_data(4), data_in.data_in(3));
+slv_to_slv(i_data(5), data_in.data_in(4));
+slv_to_slv(i_data(6), data_in.data_in(5));
+slv_to_slv(i_data(7), data_in.data_in(6));
+slv_to_slv(i_data(8), data_in.data_in(7));
+slv_to_slv(i_data(9), data_in.data_in(8));
 slv_to_sl(i_data(10), data_in.valid_in);
+slv_to_sl(i_data(11), data_in.ready_out);
 
 --</data_in_converter>
 
@@ -171,6 +174,7 @@ slv_to_sl(i_data(10), data_in.valid_in);
 data_out.rst <= data_in.rst;
 data_out.data_in <= data_in.data_in;
 data_out.valid_in <= data_in.valid_in;
+data_out.ready_out <= data_in.ready_out;
 
 -- </connect_input_output>
 

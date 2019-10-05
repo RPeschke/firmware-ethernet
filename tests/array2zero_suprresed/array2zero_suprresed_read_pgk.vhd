@@ -18,8 +18,7 @@ use work.zerosupression_p.all;
 -- End Include user packages --
 
 package array2zero_suprresed_reader_pgk is
-  constant colnum  : integer := 10;
-  constant maxchanges  : integer := 3;
+
   type array2zero_suprresed_reader_rec is record
     rst : std_logic;  
     data_in : word32array ( colnum - 1 downto 0 );  

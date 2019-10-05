@@ -39,6 +39,7 @@ begin
 data_out.rst <= data_in.rst;
 data_out.data_in <= data_in.data_in;
 data_out.valid_in <= data_in.valid_in;
+data_out.ready_out <= data_in.ready_out;
 
 
 DUT :  entity work.zero_supression_test_connection  port map(
@@ -49,6 +50,7 @@ DUT :  entity work.zero_supression_test_connection  port map(
   tomanychangeserror_a2z => data_out.tomanychangeserror_a2z,
   data_out => data_out.data_out,
   valid_out => data_out.valid_out,
+  ready_out => data_out.ready_out,
   tomanychangeserror_z2a => data_out.tomanychangeserror_z2a
     );
 

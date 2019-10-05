@@ -18,13 +18,13 @@ entity zero_supression_test_connection_reader_et  is
     );
     port (
         clk : in std_logic ;
-        data : out zero_supression_test_connection_reader_rec := zero_supression_test_connection_reader_rec_null
+        data : out zero_supression_test_connection_reader_rec:=zero_supression_test_connection_reader_rec_null
     );
 end entity;   
 
 architecture Behavioral of zero_supression_test_connection_reader_et is 
 
-  constant  NUM_COL    : integer := 11;
+  constant  NUM_COL    : integer := 12;
   signal    csv_r_data : c_integer_array(NUM_COL -1 downto 0)  := (others=>0)  ;
 begin
 
@@ -50,6 +50,7 @@ begin
   integer_to_slv(csv_r_data(8), data.data_in(7));
   integer_to_slv(csv_r_data(9), data.data_in(8));
   integer_to_sl(csv_r_data(10), data.valid_in);
+  integer_to_sl(csv_r_data(11), data.ready_out);
 
 
 end Behavioral;

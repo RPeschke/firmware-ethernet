@@ -15,12 +15,10 @@ use work.xgen_axistream_zerosupression.all;
 use work.xgen_rollingcounter.all;
 use work.zerosupression_p.all;
 
-
 -- End Include user packages --
 
 package array2zero_suprresed_writer_pgk is
-  constant colnum  : integer := 10;
-  constant maxchanges  : integer := 3;
+
   type array2zero_suprresed_writer_rec is record
     rst : std_logic;  
     data_in : word32array ( colnum - 1 downto 0 );  
