@@ -36,7 +36,8 @@ entity array2zero_suprresed is
     valid    : in std_logic;
     ToManyChangesError : out std_logic;
     zs_data_out_m2s : out axisStream_zerosupression_m2s_a(MaxChanges - 1 downto 0) := (others =>axisStream_zerosupression_m2s_null);
-    zs_data_out_s2m : in  axisStream_zerosupression_s2m_a(MaxChanges - 1 downto 0) := (others =>axisStream_zerosupression_s2m_null)
+    zs_data_out_s2m : in  axisStream_zerosupression_s2m_a(MaxChanges - 1 downto 0) := (others =>axisStream_zerosupression_s2m_null);
+    max_packet_nr : out slv(15 downto 0) := (others => '0')
   );
 end entity;
 
@@ -96,7 +97,7 @@ begin
 
        
        push(tx,zs_data_out_m2s);
-       
+       max_packet_nr <= packet_nr;
       end if;
     end process;
   end architecture;

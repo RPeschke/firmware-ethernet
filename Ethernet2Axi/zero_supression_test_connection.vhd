@@ -18,7 +18,8 @@ library IEEE;
 entity zero_supression_test_connection is
   generic(
     COLNum : integer := 10;
-    MaxChanges  : integer := 3
+    MaxChanges  : integer := 3;
+    DEPTH : natural := 10 
   );
   port (
     clk: in  std_logic;
@@ -42,6 +43,7 @@ architecture rtl of zero_supression_test_connection is
  signal zs_data_in_m2s :   axisStream_zerosupression_m2s_a(MaxChanges - 1 downto 0) := (others =>axisStream_zerosupression_m2s_null);
  signal zs_data_in_s2m :   axisStream_zerosupression_s2m_a(MaxChanges - 1 downto 0) := (others =>axisStream_zerosupression_s2m_null);
  signal i_ready_out    : std_logic :='1';
+ signal max_packet_nr : slv(15 downto 0) := (others => '0');
 begin
   process(clk) is
     
@@ -63,12 +65,13 @@ begin
       valid   => valid_in,
       ToManyChangesError => ToManyChangesError_a2z,
       zs_data_out_m2s => zs_data_out_m2s,
-      zs_data_out_s2m => zs_data_out_s2m
+      zs_data_out_s2m => zs_data_out_s2m,
+      max_packet_nr => max_packet_nr
     );
  fifogen: for i in 0 to (MaxChanges -1) generate
 fifo :  entity work.fifo_cc_axi generic map(
      DATA_WIDTH => 64,
-     DEPTH => 10 
+     DEPTH => DEPTH
    ) port map (
      clk       => clk,
      rst       => rst,
@@ -98,7 +101,8 @@ fifo :  entity work.fifo_cc_axi generic map(
       ToManyChangesError => ToManyChangesError_z2a,
       data_out => data_out,
       valid    => valid_out,
-      ready_out => i_ready_out
+      ready_out => ready_out,
+      max_packet_nr => max_packet_nr
     );
 
 end architecture;

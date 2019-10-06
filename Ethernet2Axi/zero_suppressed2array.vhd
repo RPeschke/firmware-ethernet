@@ -32,8 +32,8 @@ entity zero_suppressed2array is
     ToManyChangesError : out std_logic;
     data_out  : out  Word32Array(COLNum - 1 downto 0) := (others => (others => '0'));
     valid    : out  std_logic := '0';
-    ready_out : in std_logic
-
+    ready_out : in std_logic;
+    max_packet_nr : in slv(15 downto 0) := (others => '0')
   );
 end entity;
 
@@ -90,6 +90,13 @@ begin
         end loop;
         if running then 
           packet_nr := packet_nr+1;
+          if packet_nr > max_packet_nr then 
+            reset(v_fifo_counter);
+            packet_nr:=(others => '0');
+            data_out<=(others => (others => '0'));
+            running := False;
+            i_valid <= '0';    
+          end if;
         end if;
       end if;
       

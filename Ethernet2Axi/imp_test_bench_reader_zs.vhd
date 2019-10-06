@@ -33,34 +33,27 @@ entity imp_test_bench_reader_zs is
     data_out        : out Word32Array(COLNum - 1 downto 0) := (others => (others => '0'));
     controls_out    : out Imp_test_bench_reader_Control_t  := Imp_test_bench_reader_Control_t_null;
     valid : out sl := '0'
+
   );
 end entity;
 
 architecture rtl of imp_test_bench_reader_zs is
-  type state_t is (
-    fillFifo,
-    send,
-    wait_for_idle,
-    FIFO_FULL
-  );
-  signal s_reader_state : state_t := fillFifo;
+  signal  timestamp_signal      : slv(31 downto 0) := (others => '0');
+  signal  max_Packet_nr_signal      : slv(31 downto 0) := (others => '0');
+  signal  numStream_signal          : slv(31 downto 0) := (others => '0');
+  
   signal  rst : sl := '0';
+  signal i_data_in       :  Word32Array((COLNum -1)+2 downto 0) := (others => (others => '0'));
+  signal i_data_in_valid : sl := '0';
+  
   signal i_data_out       :  Word32Array((COLNum -1)+2 downto 0) := (others => (others => '0'));
-  signal i_data_out_old       :  Word32Array((COLNum -1)+2 downto 0) := (others => (others => '0'));
-  signal i_data_out_valid : sl := '0';
+  signal i_valid : std_logic := '0';
+  signal i_ready : std_logic := '0';
 
-  signal zs_data_in_m2s : axisStream_64_m2s_a(MaxChanges - 1 downto 0) := (others =>axisStream_64_m2s_null);
-  signal zs_data_in_s2m : axisStream_64_s2m_a(MaxChanges - 1 downto 0) := (others =>axisStream_64_s2m_null);
+  signal i_ToManyChangesError_a2z : std_logic := '0';
+  signal i_ToManyChangesError_z2a : std_logic :='0';
 
-  signal zs_data_out_m2s : axisStream_64_m2s_a(MaxChanges - 1 downto 0) := (others =>axisStream_64_m2s_null);
-  signal zs_data_out_s2m : axisStream_64_s2m_a(MaxChanges - 1 downto 0) := (others =>axisStream_64_s2m_null);
-
-  type axisStream_64_m2s is record 
-    array_index : STD_LOGIC_VECTOR(15 downto 0); 
-    time_index  : STD_LOGIC_VECTOR(15 downto 0); 
-    data        : std_logic_vector(31 downto 0); 
-  end record;
-
+  
 begin
 
   des : entity work.StreamDeserializer generic map (
@@ -72,65 +65,53 @@ begin
     rxDataValid => rxDataValid,
     rxDataLast  => rxDataLast,
     rxDataReady => rxDataReady,
-    data_out    => i_data_out,
-    valid       => i_data_out_valid
+    data_out    => i_data_in,
+    valid       => i_data_in_valid
   );
 
 
   send_data_from_fifo: process(clk) is
-    variable packet_nr : slv(15 downto 0) := (others => '0');
-    variable  v_fifo_counter : rollingCounter := rollingCounter_null;
-    variable RX: axisStream_64_slave_a(MaxChanges - 1 downto 0):= (others => axisStream_64_slave_null);
-    variable array_index : STD_LOGIC_VECTOR(15 downto 0) := (others => '0');  
-    variable time_index  : STD_LOGIC_VECTOR(15 downto 0):= (others => '0');  
-    variable data        : std_logic_vector(31 downto 0):= (others => '0');  
-    variable buff        : std_logic_vector(63 downto 0):= (others => '0');  
+
 
   begin 
     if (rising_edge(Clk)) then
-      for i in 0 to MaxChanges - 1 loop 
-        pull(RX(i) , zs_data_out_m2s(i));
-      end loop;
+      rst <= '0';
+    if    i_data_in_valid = '1' and data_out(0) > 0 then 
+      i_ready <= '1';
+    elsif i_valid ='0' and i_ready = '1' then
+      i_ready <= '0';
+      rst <= '1';
+    end if;
 
-
-      if s_reader_state = send then
-        if isReceivingData(RX(v_fifo_counter.Counter)) then 
-          read_data(RX(v_fifo_counter.Counter), buff);
-          array_index:= buff(63 downto 48);
-          time_index :=  buff(47 downto 32);
-          data :=  buff(31 downto 0);
-          if time_index = packet_nr then
-            
-          end if;
-        end if;
-      end if;
-
-
-      for i in 0 to MaxChanges - 1 loop 
-        push(RX(i) , zs_data_out_s2m(i));
-      end loop;
-
+    if i_ToManyChangesError_z2a ='1' or i_ToManyChangesError_a2z ='1' then
+      rst <= '1';
+    end if;
     end if;
   end process;
 
-  genFifo : for i in 0 to MaxChanges -1 generate
-    dataFifo : entity work.fifo_cc_axi generic map(
-      DATA_WIDTH => 64,
+
+
+ zs_fifo :  entity  work.zero_supression_test_connection generic map(
+      COLNum =>  COLNum + 2,
+      MaxChanges => MaxChanges,
       DEPTH => FIFO_DEPTH
     ) port map (
-      clk       => clk,
-      rst       => rst, 
-      RX_Data   => zs_data_in_m2s(i).data,
-      RX_Valid  => zs_data_in_m2s(i).valid,
-      RX_Last   => zs_data_in_m2s(i).valid,
-      RX_Ready  => zs_data_in_s2m(i).ready,
+      clk => clk,
+      rst => rst,
 
-      TX_Data   => zs_data_out_m2s(i).data,
-      TX_Valid  => zs_data_out_m2s(i).valid,
-      TX_Last   => zs_data_out_m2s(i).last,
-      TX_Ready  => zs_data_out_s2m(i).ready
+      data_in    => i_data_in,
+      valid_in   => i_data_in_valid,
+      ToManyChangesError_a2z => i_ToManyChangesError_a2z,
+
+      data_out    => i_data_out,
+      valid_out   => i_valid,
+      ready_out   => i_ready,
+      ToManyChangesError_z2a =>i_ToManyChangesError_z2a
     );
-
-
-  end generate genFifo;
+    valid <= i_valid;
+    controls_out.timestampSend  <= timestamp_signal; -- controls_out(1)
+    controls_out.maxPacketNr    <= max_Packet_nr_signal;  -- controls_out(2)
+    controls_out.numStream      <= numStream_signal; -- controls_out(3)
+    controls_out.Operation  <= i_data_out(0);
+    data_out <= i_data_out;
 end architecture;
