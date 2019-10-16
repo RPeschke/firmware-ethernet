@@ -9,7 +9,8 @@ library ieee;
   use work.axiDWORDbi_p.all;
   use work.fifo_cc_pgk_32.all;
   use work.type_conversions_pgk.all;
-  use work.axi_stream_pgk_32.all;
+  use work.xgen_axistream_32.all;
+
   use work.Imp_test_bench_pgk.all;
   
 
@@ -43,9 +44,11 @@ architecture Behavioral of Imp_test_bench_writer is
      signal in_buffer_empty_v : slv (COLNum -1 + Imp_test_bench_reader_Control_t_length downto 0) := (others =>  '0');
      signal in_buffer_empty : sl  := '0';
 	  signal in_buffer_reset : sl  := '0';
-     signal  i_fifo_out_m2s :  axi_stream_32_m2s := axi_stream_32_m2s_null;
-     signal  i_fifo_out_s2m :  axi_stream_32_s2m := axi_stream_32_s2m_null;
+     signal  i_fifo_out_m2s :  axisStream_32_m2s := axisStream_32_m2s_null;
+     signal  i_fifo_out_s2m :  axisStream_32_s2m := axisStream_32_s2m_null;
      
+     signal  i_fifo_out_m2s_out : axisStream_32_m2s := axisStream_32_m2s_null;
+     signal  i_fifo_out_s2m_out : axisStream_32_s2m := axisStream_32_s2m_null;
 
      signal in_buffer_full_v : slv (COLNum -1 + Imp_test_bench_reader_Control_t_length downto 0) := (others =>  '0');
      signal in_buffer_full : sl  := '0';
@@ -76,10 +79,26 @@ architecture Behavioral of Imp_test_bench_writer is
 
    begin
      
-     tXData <= i_fifo_out_m2s.data;
-     txDataValid <= i_fifo_out_m2s.valid;
-     txDataLast <= i_fifo_out_m2s.last;
-     i_fifo_out_s2m.ready <= txDataReady;
+     
+    outDeley : entity work.axiStreamDelayBuffer 
+       generic map(
+         Depth => 5
+       ) port map (
+         clk => clk,
+
+         data_in_m2s => i_fifo_out_m2s,
+         data_in_s2m => i_fifo_out_s2m,
+
+         data_out_m2s => i_fifo_out_m2s_out,
+         data_out_s2m => i_fifo_out_s2m_out
+
+       );
+    
+     
+     tXData <= i_fifo_out_m2s_out.data;
+     txDataValid <= i_fifo_out_m2s_out.valid;
+     txDataLast <= i_fifo_out_m2s_out.last;
+     i_fifo_out_s2m_out.ready <= txDataReady;
   
 
 
@@ -87,8 +106,7 @@ architecture Behavioral of Imp_test_bench_writer is
     variable  fifo :  FIFO_nativ_stream_reader_32_slave := FIFO_nativ_stream_reader_32_slave_null;
     variable index : integer := i_data_in'length +1;
     variable  dummy_data :  slv(31 downto 0) := (others => '0');
-    variable out_fifo : axi_stream_32_master_stream := axi_stream_32_master_stream_null;
-
+    variable out_fifo :  axisStream_32_master:= axisStream_32_master_null;
     variable send_Nr_of_streams : boolean := True;
     variable send_BOS : boolean := True;
 	 variable v_EOS  : std_logic_vector(31 downto 0) := EOS;
@@ -98,7 +116,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
 
 
-        pull_axi_stream_32_master_stream(out_fifo , i_fifo_out_s2m);
+        pull(out_fifo , i_fifo_out_s2m);
         in_buffer_readEnablde <= '0';
 		    in_buffer_reset <= '0';
         
@@ -138,7 +156,7 @@ architecture Behavioral of Imp_test_bench_writer is
 
 
         
-      push_axi_stream_32_master_stream(out_fifo, i_fifo_out_m2s);
+      push(out_fifo, i_fifo_out_m2s);
     
     end if;
   end process;

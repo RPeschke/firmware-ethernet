@@ -10,9 +10,9 @@ use work.UtilityPkg.all;
 use work.axiDWORDbi_p.all;
 use work.fifo_cc_pgk_32.all;
 use work.type_conversions_pgk.all;
-use work.axi_stream_pgk_32.all;
-use work.Imp_test_bench_pgk.all;
 
+use work.Imp_test_bench_pgk.all;
+  use work.xgen_axistream_32.all;
 
 entity Imp_test_bench_reader is 
 generic ( 
@@ -77,7 +77,8 @@ signal packet_counter_r_s2m : FIFO_nativ_reader_32_s2m := FIFO_nativ_reader_32_s
 signal  reset : sl := '0';
 
 
-
+signal  i_fifo_inBuffer_m2s :  axisStream_32_m2s := axisStream_32_m2s_null;
+signal  i_fifo_inBuffer_s2m :  axisStream_32_s2m := axisStream_32_s2m_null;
 
 
 
@@ -95,15 +96,33 @@ signal i_fifo_full_or_reduce  :  sl := '0';
 signal i_fifo_write_enable  :  sl := '0';
 begin
 
+  
+  inDeley : entity work.axiStreamDelayBuffer 
+    generic map(
+      Depth => 5
+    ) port map (
+      clk => clk,
+
+      data_in_m2s.data  => rxData,
+      data_in_m2s.valid => rxDataValid,
+      data_in_m2s.last  => rxDataLast,
+      data_in_s2m.ready => rxDataReady,
+
+      data_out_m2s =>  i_fifo_inBuffer_m2s,
+      data_out_s2m => i_fifo_inBuffer_s2m
+
+    );
+
+  
 des : entity work.StreamDeserializer generic map (
   COLNum => COLNum + 2
 ) port map ( 
   Clk    => Clk,
 -- Incoming data
-  rxData      => rxData,
-  rxDataValid => rxDataValid,
-  rxDataLast  => rxDataLast,
-  rxDataReady => rxDataReady,
+  rxData      => i_fifo_inBuffer_m2s.data,
+  rxDataValid => i_fifo_inBuffer_m2s.valid,
+  rxDataLast  => i_fifo_inBuffer_m2s.last,
+  rxDataReady => i_fifo_inBuffer_s2m.ready,
   data_out    => i_data_out,
   valid       => i_data_out_valid
 );
