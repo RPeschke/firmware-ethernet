@@ -13,6 +13,8 @@ use work.type_conversions_pgk.all;
 
 use work.Imp_test_bench_pgk.all;
   use work.xgen_axistream_32.all;
+  use work.roling_register_p.all;
+
 
 entity Imp_test_bench_reader is 
 generic ( 
@@ -101,8 +103,10 @@ begin
     generic map(
       Depth => 5
     ) port map (
-      clk => clk,
+      globals.clk => clk,
+      globals.rst  => '0',
 
+      globals.reg  => registerT_null,
       data_in_m2s.data  => rxData,
       data_in_m2s.valid => rxDataValid,
       data_in_m2s.last  => rxDataLast,

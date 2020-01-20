@@ -12,7 +12,8 @@ library ieee;
   use work.xgen_axistream_32.all;
 
   use work.Imp_test_bench_pgk.all;
-  
+  use work.roling_register_p.all;
+
 
 entity Imp_test_bench_writer is 
   generic ( 
@@ -84,8 +85,10 @@ architecture Behavioral of Imp_test_bench_writer is
        generic map(
          Depth => 5
        ) port map (
-         clk => clk,
-
+         globals.clk => clk,
+          globals.rst  => '0',
+          
+          globals.reg  => registerT_null,
          data_in_m2s => i_fifo_out_m2s,
          data_in_s2m => i_fifo_out_s2m,
 
@@ -136,7 +139,7 @@ architecture Behavioral of Imp_test_bench_writer is
           index := index + 1;
         elsif  ready_to_send(out_fifo)  and index = (i_data_in'length) then 
           send_data(out_fifo, v_EOS);
-          Send_end_Of_Stream(out_fifo);
+          Send_end_Of_Stream(out_fifo,true);
           Nr_of_streams <= Nr_of_streams+1;
           send_Nr_of_streams := True;
           send_BOS := true;
