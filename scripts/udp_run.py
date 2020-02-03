@@ -13,10 +13,20 @@ parser.add_argument('--OutputFile', help='Name of the entity Test bench',default
 parser.add_argument('--Verbose', help='Name of the entity Test bench',default="false")
 parser.add_argument('--IpAddress', help='Ip Address of the Scrod',default="192.168.1.33")
 parser.add_argument('--port', help='Port of the Scrod',default=2001)
-
+parser.add_argument('--OutputHeader', help='Header File for the output csv file',default="")
 
 args = parser.parse_args()
 
+def get_header(HeaderFile):
+    if not HeaderFile:
+        return ""
+    with open(HeaderFile) as f:
+        ret = f.readlines()
+
+    ret = ret[0]
+    return ret
+
+Header = get_header(args.OutputHeader)
 
 def debug_print(text):
     if args.Verbose != "false":
@@ -164,7 +174,7 @@ i = 0
 startTime = time.time()
 print(startTime)
 with open(args.OutputFile,"w",newline="") as f:
-    
+    f.write(Header)
     while scrod1.hasData():
         data = scrod1.receive()
         line = ""
