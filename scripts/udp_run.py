@@ -1,4 +1,4 @@
-#!/home/belle2/anaconda3/bin/python
+#!/usr/bin/python3
 import socket
 import select
 import array
