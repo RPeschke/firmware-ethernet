@@ -364,15 +364,34 @@ NET WR2_ENA<9>				LOC= L21;								# TDC10_WR2_ENA,
 
 
 
+NET "SCL_MON"				LOC= A2    | IOSTANDARD = LVCMOS33;		# SCL_MON,	J3_021_H13_SCL0
+NET "SDA_MON"				LOC= A3    | IOSTANDARD = LVCMOS33;		# SDA_MON,	J3_023_F14_SDA0      
 
 
 
 
+NET TDC_CS_DAC<0>				LOC= V11;		# TDC1_CS_DAC,	J3_065_T19                            
+NET TDC_CS_DAC<1>				LOC= V13;		# TDC2_CS_DAC,	J3_064_R19                            
+NET TDC_CS_DAC<2>				LOC= V16;		# TDC3_CS_DAC,	J3_062_R21                            
+NET TDC_CS_DAC<3>				LOC= Y21;		# TDC4_CS_DAC,	J3_061_P21                            
+NET TDC_CS_DAC<4>			LOC= AA22;								# TDC5_CS_DAC,	                            
+NET TDC_CS_DAC<5>			LOC= N17;								# TDC6_CS_DAC,	                           
+NET TDC_CS_DAC<6>			LOC= P17;								# TDC7_CS_DAC,	                          
+NET TDC_CS_DAC<7>			LOC= R18;								# TDC8_CS_DAC,	                
+NET TDC_CS_DAC<8>			LOC= Y11;								# TDC9_CS_DAC,	                
+NET TDC_CS_DAC<9>			LOC= AA11;								# TDC10_CS_DAC,	                  
 
 
 
+NET TDC_AMUX_S<0>     LOC= Y17;
+NET TDC_AMUX_S<1>     LOC= AA17;
+NET TDC_AMUX_S<2>     LOC= AA8;
+NET TDC_AMUX_S<3>     LOC= Y9;
 
-
+NET TOP_AMUX_S<0>     LOC= N18;
+NET TOP_AMUX_S<1>     LOC= T19;
+NET TOP_AMUX_S<2>     LOC= V12;
+NET TOP_AMUX_S<3>     LOC= W12;
 
 
 
