@@ -114,7 +114,9 @@ port(
    ren   : in  std_logic;
    dout  : out std_logic_vector(DATA_WIDTH-1 downto 0);
    full  : out std_logic;
-   empty : out std_logic
+   empty : out std_logic;
+   counter : out std_logic_vector(DEPTH-1 downto 0) := (others => '0')
+
 );
 end fifo_cc;
 
@@ -133,7 +135,7 @@ architecture fifo_cc_arch of fifo_cc is
    constant MAX_ADDR  : std_logic_vector(DEPTH-1 downto 0) := (others =>'1');
    
 begin
-
+  counter <= i_cnt;
    ---- instantiate BRAM with FIFO content
    bram_i : entity work.bram_sdp_cc 
    generic map(
