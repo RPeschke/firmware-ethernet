@@ -14,11 +14,11 @@ port (
     -- Port A
     clk   : in  std_logic;
     wea    : in  std_logic;
-    addra  : in  std_logic_vector(ADDR-1 downto 0);
-    dina   : in  std_logic_vector(DATA-1 downto 0);
+    addra  : in  std_logic_vector(ADDR-1 downto 0) := (others => '0');
+    dina   : in  std_logic_vector(DATA-1 downto 0) := (others => '0');
     -- Port B
-    addrb  : in  std_logic_vector(ADDR-1 downto 0);
-    doutb  : out std_logic_vector(DATA-1 downto 0)
+    addrb  : in  std_logic_vector(ADDR-1 downto 0) := (others => '0');
+    doutb  : out std_logic_vector(DATA-1 downto 0) := (others => '0')
 );
 end bram_sdp_cc;
  
